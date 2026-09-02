@@ -1,4 +1,4 @@
-name: Universal Multi-Platform Release
+name: Android Release
 
 on:
   push:
@@ -18,27 +18,16 @@ on:
         description: 'Save as Draft'
         type: boolean
         default: false
-      target_platform:
-        description: 'Target Platform to Build (all / android / linux / windows / web)'
-        type: choice
-        options:
-          - all
-          - android
-          - linux
-          - windows
-          - web
-        default: all
 
 permissions:
   contents: write
 
 jobs:
   # =========================================================================
-  # 1. ANDROID BUILDS (AAB, Universal APK, Split ABIs)
+  # ANDROID BUILDS (AAB, Universal APK, Split ABIs)
   # =========================================================================
   build_android:
     name: 🤖 Android (AAB & APKs)
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'android'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -143,169 +132,11 @@ jobs:
           if-no-files-found: error
 
   # =========================================================================
-  # 2. WEB BUNDLE
-  # =========================================================================
-  build_web:
-    name: 🌐 Web (PWA Bundle)
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'web'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Extract Version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
-            VER="${{ github.event.inputs.version_name }}"
-          else
-            VER="${GITHUB_REF_NAME#v}"
-          fi
-          echo "VERSION=$VER" >> $GITHUB_OUTPUT
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Flutter Web
-        run: flutter build web --release
-
-      - name: Package Web Bundle
-        run: |
-          mkdir -p dist/web
-          VER="${{ steps.version.outputs.VERSION }}"
-          cd build/web
-          tar -czf "../../dist/web/Arkan-web-${VER}.tar.gz" .
-          zip -r "../../dist/web/Arkan-web-${VER}.zip" .
-          cd ../..
-          ls -la dist/web
-
-      - name: Upload Web Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-release-packages
-          path: dist/web/*
-          if-no-files-found: error
-
-  # =========================================================================
-  # 3. LINUX DESKTOP
-  # =========================================================================
-  build_linux:
-    name: 🐧 Linux Desktop (.tar.gz)
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'linux'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Extract Version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
-            VER="${{ github.event.inputs.version_name }}"
-          else
-            VER="${GITHUB_REF_NAME#v}"
-          fi
-          echo "VERSION=$VER" >> $GITHUB_OUTPUT
-
-      - name: Install Linux Build Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Linux
-        run: flutter build linux --release
-
-      - name: Package Linux Bundle
-        run: |
-          mkdir -p dist/linux
-          VER="${{ steps.version.outputs.VERSION }}"
-          cd build/linux/x64/release/bundle
-          tar -czf "../../../../../dist/linux/Arkan-linux-x64-${VER}.tar.gz" .
-          cd ../../../../..
-          ls -la dist/linux
-
-      - name: Upload Linux Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-release-packages
-          path: dist/linux/*
-          if-no-files-found: error
-
-  # =========================================================================
-  # 4. WINDOWS DESKTOP
-  # =========================================================================
-  build_windows:
-    name: 🪟 Windows Desktop (.zip)
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'windows'
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Extract Version
-        id: version
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
-            VER="${{ github.event.inputs.version_name }}"
-          else
-            VER="${GITHUB_REF_NAME#v}"
-          fi
-          echo "VERSION=$VER" >> $GITHUB_OUTPUT
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - name: Package Windows Bundle
-        shell: bash
-        run: |
-          mkdir -p dist/windows
-          VER="${{ steps.version.outputs.VERSION }}"
-          cd build/windows/x64/runner/Release
-          7z a "../../../../../dist/windows/Arkan-Windows-x64-${VER}.zip" *
-          cd ../../../../..
-          ls -la dist/windows
-
-      - name: Upload Windows Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-release-packages
-          path: dist/windows/*
-          if-no-files-found: error
-
-  # =========================================================================
-  # 5. CREATE GITHUB RELEASE
+  # PUBLISH GITHUB RELEASE
   # =========================================================================
   publish_release:
     name: 🚀 Publish GitHub Release
-    needs: [build_android, build_web, build_linux, build_windows]
-    if: always() && (needs.build_android.result == 'success' || needs.build_web.result == 'success' || needs.build_linux.result == 'success' || needs.build_windows.result == 'success')
+    needs: [build_android]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -361,14 +192,11 @@ jobs:
 
           ---
 
-          ### 📦 الملفات المرفقة للتحميل (Downloads):
-          * **Android App Bundle (Google Play):** \`Arkan-${VER}.aab\`
-          * **Android Universal APK (جميع الهواتف):** \`Arkan-${VER}-universal.apk\`
-          * **Android Modern 64-bit (الهواتف الحديثة):** \`Arkan-${VER}-arm64-v8a.apk\`
-          * **Android 32-bit (الهواتف القديمة):** \`Arkan-${VER}-armeabi-v7a.apk\`
-          * **Web Static Bundle:** \`Arkan-web-${VER}.zip\`
-          * **Linux Desktop:** \`Arkan-linux-x64-${VER}.tar.gz\`
-          * **Windows Desktop:** \`Arkan-Windows-x64-${VER}.zip\`
+          ### 📦 الملفات المرفقة للتحميل (Android Downloads):
+          * 🏪 **Android App Bundle (متجر جوجل بلاي):** \`Arkan-${VER}.aab\`
+          * 📱 **Android Universal APK (لكل أنواع الهواتف والأجهزة):** \`Arkan-${VER}-universal.apk\`
+          * ⚡ **Android Modern 64-bit (حجم أصغر للهواتف الحديثة arm64):** \`Arkan-${VER}-arm64-v8a.apk\`
+          * 📱 **Android 32-bit (للهواتف القديمة armeabi-v7a):** \`Arkan-${VER}-armeabi-v7a.apk\`
 
           🔐 **التحقق من سلامة الملفات:** راجع ملف \`SHA256SUMS.txt\` المرفق.
           EOF
