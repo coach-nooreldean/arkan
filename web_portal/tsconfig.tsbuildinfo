@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/BentoGrid.tsx","./src/components/FaqSection.tsx","./src/components/Footer.tsx","./src/components/InstallGuide.tsx","./src/components/Navbar.tsx","./src/components/ReleasesHub.tsx","./src/components/simulator/SmartphoneSimulator.tsx","./src/lib/deviceDetector.ts","./src/pages/HomePage.tsx"],"version":"5.9.3"}

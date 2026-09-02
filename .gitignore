@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Web Portal
+web_portal/node_modules/
+web_portal/dist/
+web_portal/.vite/
