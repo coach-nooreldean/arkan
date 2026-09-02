@@ -60,6 +60,7 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
           child: Align(
             alignment: Alignment.bottomCenter,
+            heightFactor: 1.0,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 580),
               child: ClipRRect(
