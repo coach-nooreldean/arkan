@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.arkan.arkan"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
