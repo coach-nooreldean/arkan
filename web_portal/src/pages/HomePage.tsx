@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Download, Sparkles, Smartphone, ShieldCheck, WifiOff, 
-  ArrowLeft, Star, Heart, CheckCircle2, Play
+  ArrowLeft, Star, Heart, CheckCircle2, Play, Globe
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { detectDevice, DeviceInfo } from '../lib/deviceDetector';
@@ -21,6 +21,7 @@ export const HomePage: React.FC = () => {
     recommendedFile: 'Arkan-1.0.0-universal.apk',
     downloadUrl: '#releases',
     isMobile: true,
+    isAndroid: true,
   });
 
   useEffect(() => {
@@ -74,24 +75,75 @@ export const HomePage: React.FC = () => {
               المصحف الشريف المرتل، مواقيت الصلاة والأذان الدقيقة، وحصن المسلم، والمسبحة الذكية، ومحفظة كوينز الطاعات — <strong className="text-white font-bold">يعمل محلياً 100% بدون إنترنت، وبلا أي إعلانات نهائياً</strong>.
             </p>
 
-            {/* Smart Download CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
-              <a
-                href={`https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/${deviceInfo.recommendedFile}`}
-                onClick={handleHeroDownload}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-base font-extrabold bg-gradient-to-r from-gold-500 via-amber-500 to-gold-600 text-slate-950 hover:from-gold-400 hover:to-amber-400 shadow-neon-gold hover:scale-[1.02] active:scale-95 transition-all duration-200"
-              >
-                <Download className="w-5 h-5" />
-                <span>تحميل {deviceInfo.label} ({deviceInfo.badge})</span>
-              </a>
+            {/* Non-Android Device Smart Notice */}
+            {!deviceInfo.isAndroid && (
+              <div className="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-teal-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-right shadow-neon-blue/20">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300 shrink-0">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-teal-300 font-semibold block">جهازك الحالي ({deviceInfo.label})</span>
+                    <p className="text-sm font-bold text-white">
+                      تقدر تستخدم نسخة الويب من هنا مباشرة بدون أي تحميل!
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="https://arkan-app.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-400 text-slate-950 text-xs font-black shadow-md hover:scale-105 active:scale-95 transition-all text-center shrink-0"
+                >
+                  فتح نسخة الويب الآن ↗
+                </a>
+              </div>
+            )}
 
-              <a
-                href="#simulator"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-base font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20 transition-all duration-200"
-              >
-                <Smartphone className="w-5 h-5 text-gold-400" />
-                <span>جرّب التطبيق مباشرة</span>
-              </a>
+            {/* Smart Download & Web CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+              {deviceInfo.isAndroid ? (
+                <>
+                  <a
+                    href="https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/Arkan-1.0.0-universal.apk"
+                    onClick={handleHeroDownload}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-base font-extrabold bg-gradient-to-r from-gold-500 via-amber-500 to-gold-600 text-slate-950 hover:from-gold-400 hover:to-amber-400 shadow-neon-gold hover:scale-[1.02] active:scale-95 transition-all duration-200"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span>تحميل أندرويد (APK الشامل)</span>
+                  </a>
+
+                  <a
+                    href="https://arkan-app.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-base font-bold bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 hover:border-teal-500/50 shadow-neon-blue hover:scale-[1.02] active:scale-95 transition-all duration-200"
+                  >
+                    <Globe className="w-5 h-5 text-teal-400" />
+                    <span>تشغيل نسخة الويب مباشرة ↗</span>
+                  </a>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="https://arkan-app.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-base font-extrabold bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-500 text-slate-950 hover:from-teal-300 hover:to-emerald-300 shadow-neon-blue hover:scale-[1.02] active:scale-95 transition-all duration-200"
+                  >
+                    <Globe className="w-5 h-5 text-slate-950" />
+                    <span>تشغيل نسخة الويب من هنا ↗</span>
+                  </a>
+
+                  <a
+                    href="#releases"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl text-base font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20 transition-all duration-200"
+                  >
+                    <Download className="w-5 h-5 text-gold-400" />
+                    <span>تحميل ملفات APK للأندرويد</span>
+                  </a>
+                </>
+              )}
             </div>
 
             {/* Direct APK Download Quick Links */}
@@ -120,6 +172,15 @@ export const HomePage: React.FC = () => {
               >
                 <Download className="w-3.5 h-3.5 text-emerald-400" />
                 <span>الهواتف القديمة 32-bit (24.9MB)</span>
+              </a>
+              <a
+                href="https://arkan-app.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5 text-teal-400" />
+                <span>نسخة الويب (Vercel) ↗</span>
               </a>
             </div>
 

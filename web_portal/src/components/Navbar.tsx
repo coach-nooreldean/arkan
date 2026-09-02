@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Sparkles, Menu, X, ShieldCheck, Heart } from 'lucide-react';
+import { Download, Sparkles, Menu, X, ShieldCheck, Heart, Globe } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -32,6 +32,15 @@ export const Navbar: React.FC = () => {
             <a href="#features" className="hover:text-gold-400 transition-colors">المميزات</a>
             <a href="#simulator" className="hover:text-gold-400 transition-colors">معاينة التطبيق</a>
             <a href="#releases" className="hover:text-gold-400 transition-colors">مركز التحميل</a>
+            <a 
+              href="https://arkan-app.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-teal-400 hover:text-teal-300 flex items-center gap-1.5 transition-colors font-bold"
+            >
+              <Globe className="w-4 h-4" />
+              <span>نسخة الويب ↗</span>
+            </a>
             <a href="#install-guide" className="hover:text-gold-400 transition-colors">طريقة التثبيت</a>
             <a href="#faq" className="hover:text-gold-400 transition-colors">الأسئلة الشائعة</a>
           </nav>
@@ -92,6 +101,16 @@ export const Navbar: React.FC = () => {
               className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-white/5"
             >
               مركز التحميل
+            </a>
+            <a 
+              href="https://arkan-app.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-base font-bold text-teal-400 hover:bg-white/5"
+            >
+              <Globe className="w-4 h-4" />
+              <span>نسخة الويب (مباشر) ↗</span>
             </a>
             <a 
               href="#install-guide" 
