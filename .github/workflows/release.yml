@@ -1,0 +1,387 @@
+name: Universal Multi-Platform Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Release Version (e.g. 1.0.0)'
+        required: false
+        default: '1.0.0'
+      is_prerelease:
+        description: 'Mark as Pre-release'
+        type: boolean
+        default: false
+      is_draft:
+        description: 'Save as Draft'
+        type: boolean
+        default: false
+      target_platform:
+        description: 'Target Platform to Build (all / android / linux / windows / web)'
+        type: choice
+        options:
+          - all
+          - android
+          - linux
+          - windows
+          - web
+        default: all
+
+permissions:
+  contents: write
+
+jobs:
+  # =========================================================================
+  # 1. ANDROID BUILDS (AAB, Universal APK, Split ABIs)
+  # =========================================================================
+  build_android:
+    name: 🤖 Android (AAB & APKs)
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'android'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          df -h
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Extract Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
+            VER="${{ github.event.inputs.version_name }}"
+          else
+            VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "VERSION=$VER" >> $GITHUB_OUTPUT
+          echo "Resolved version: $VER"
+
+      - name: Setup Android Keystore (Signed or Free Auto-Generated)
+        run: |
+          mkdir -p android/app
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "Using configured GitHub Secrets for Keystore..."
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/key.jks
+            echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > android/key.properties
+            echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
+            echo "storeFile=app/key.jks" >> android/key.properties
+          else
+            echo "Generating release keystore on the fly..."
+            keytool -genkey -v -keystore android/app/key.jks \
+              -alias arkan_release \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass arkan123 -keypass arkan123 \
+              -dname "CN=Arkan App, OU=Mobile, O=Arkan, L=Cairo, C=EG"
+            echo "storePassword=arkan123" > android/key.properties
+            echo "keyPassword=arkan123" >> android/key.properties
+            echo "keyAlias=arkan_release" >> android/key.properties
+            echo "storeFile=app/key.jks" >> android/key.properties
+          fi
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Android AppBundle (Play Store)
+        run: flutter build appbundle --release
+
+      - name: Build Android Universal APK
+        run: flutter build apk --release
+
+      - name: Build Android Split APKs (Per-ABI)
+        run: flutter build apk --release --split-per-abi
+
+      - name: Organize Android Artifacts
+        run: |
+          mkdir -p dist/android
+          VER="${{ steps.version.outputs.VERSION }}"
+
+          # AAB
+          cp build/app/outputs/bundle/release/app-release.aab "dist/android/Arkan-${VER}.aab"
+
+          # Universal APK
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/android/Arkan-${VER}-universal.apk"
+
+          # Split APKs
+          if [ -f build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/android/Arkan-${VER}-arm64-v8a.apk"
+          fi
+          if [ -f build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "dist/android/Arkan-${VER}-armeabi-v7a.apk"
+          fi
+          if [ -f build/app/outputs/flutter-apk/app-x86_64-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-x86_64-release.apk "dist/android/Arkan-${VER}-x86_64.apk"
+          fi
+
+          ls -la dist/android
+
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-packages
+          path: dist/android/*
+          if-no-files-found: error
+
+  # =========================================================================
+  # 2. WEB BUNDLE
+  # =========================================================================
+  build_web:
+    name: 🌐 Web (PWA Bundle)
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'web'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
+            VER="${{ github.event.inputs.version_name }}"
+          else
+            VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "VERSION=$VER" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Flutter Web
+        run: flutter build web --release
+
+      - name: Package Web Bundle
+        run: |
+          mkdir -p dist/web
+          VER="${{ steps.version.outputs.VERSION }}"
+          cd build/web
+          tar -czf "../../dist/web/Arkan-web-${VER}.tar.gz" .
+          zip -r "../../dist/web/Arkan-web-${VER}.zip" .
+          cd ../..
+          ls -la dist/web
+
+      - name: Upload Web Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release-packages
+          path: dist/web/*
+          if-no-files-found: error
+
+  # =========================================================================
+  # 3. LINUX DESKTOP
+  # =========================================================================
+  build_linux:
+    name: 🐧 Linux Desktop (.tar.gz)
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'linux'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
+            VER="${{ github.event.inputs.version_name }}"
+          else
+            VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "VERSION=$VER" >> $GITHUB_OUTPUT
+
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Package Linux Bundle
+        run: |
+          mkdir -p dist/linux
+          VER="${{ steps.version.outputs.VERSION }}"
+          cd build/linux/x64/release/bundle
+          tar -czf "../../../../../dist/linux/Arkan-linux-x64-${VER}.tar.gz" .
+          cd ../../../../..
+          ls -la dist/linux
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-packages
+          path: dist/linux/*
+          if-no-files-found: error
+
+  # =========================================================================
+  # 4. WINDOWS DESKTOP
+  # =========================================================================
+  build_windows:
+    name: 🪟 Windows Desktop (.zip)
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'windows'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
+            VER="${{ github.event.inputs.version_name }}"
+          else
+            VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "VERSION=$VER" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Package Windows Bundle
+        shell: bash
+        run: |
+          mkdir -p dist/windows
+          VER="${{ steps.version.outputs.VERSION }}"
+          cd build/windows/x64/runner/Release
+          7z a "../../../../../dist/windows/Arkan-Windows-x64-${VER}.zip" *
+          cd ../../../../..
+          ls -la dist/windows
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-packages
+          path: dist/windows/*
+          if-no-files-found: error
+
+  # =========================================================================
+  # 5. CREATE GITHUB RELEASE
+  # =========================================================================
+  publish_release:
+    name: 🚀 Publish GitHub Release
+    needs: [build_android, build_web, build_linux, build_windows]
+    if: always() && (needs.build_android.result == 'success' || needs.build_web.result == 'success' || needs.build_linux.result == 'success' || needs.build_windows.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version Info
+        id: release_info
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_name }}" ]; then
+            VER="${{ github.event.inputs.version_name }}"
+            TAG="v${VER}"
+          else
+            VER="${GITHUB_REF_NAME#v}"
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "VERSION=$VER" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Download All Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded_artifacts
+
+      - name: Collate Release Files & Generate SHA256
+        run: |
+          mkdir -p release_binaries
+          find downloaded_artifacts -type f -exec cp {} release_binaries/ \;
+
+          cd release_binaries
+          sha256sum * > SHA256SUMS.txt
+          cd ..
+
+          ls -lh release_binaries/
+
+      - name: Generate Release Notes
+        run: |
+          VER="${{ steps.release_info.outputs.VERSION }}"
+          cat << 'EOF' > release_binaries/release_notes.md
+          # 🕋 تطبيق أركان الإسلامي | Arkan Islamic App v${VER}
+
+          تطبيق إسلامي شامل ومستقل بالكامل يعمل دون الحاجة لأي اتصال بالإنترنت (100% Offline).
+
+          ---
+
+          ### ✨ أبرز مميزات الإصدار:
+          * 🕌 **مواقيت الصلاة والأذان**: حساب فلكي دقيق مع 4 أصوات أذان كاملة وتنبيهات الأذان في الوقت المحدد.
+          * 📖 **المصحف الشريف**: طبعة مجمع الملك فهد عالية الدقة مع 3 أوضاع قراءة واستماع صوتي لكبار القراء مع تظليل الآيات.
+          * 🛡️ **حصن المسلم والأذكار**: أذكار الصباح والمساء وأذكار الصلاة مع عدادات تفاعلية واهتزازات لمسية.
+          * 📿 **المسبحة الإلكترونية الذكية**: تسبيح تفاعلي باللمس مع إمكانية إضافة أذكار وتحديد أهداف مخصصة.
+          * 🪙 **نظام كوينز ومكافآت الطاعات**: محفظة محلية لتشجيع العبادات ورتب إيمانية وشارات إنجاز وسجل حركات.
+          * 🧭 **الكنوز الروحانية**: بوصلة القبلة، أسماء الله الحسنى، والأربعون النووية مع الشرح والمشاركة.
+          * 🔒 **خصوصية تامة 100%**: لا إعلانات، لا تعقب، ولا يتطلب أي تسجيل دخول أو جمع بيانات.
+
+          ---
+
+          ### 📦 الملفات المرفقة للتحميل (Downloads):
+          * **Android App Bundle (Google Play):** \`Arkan-${VER}.aab\`
+          * **Android Universal APK (جميع الهواتف):** \`Arkan-${VER}-universal.apk\`
+          * **Android Modern 64-bit (الهواتف الحديثة):** \`Arkan-${VER}-arm64-v8a.apk\`
+          * **Android 32-bit (الهواتف القديمة):** \`Arkan-${VER}-armeabi-v7a.apk\`
+          * **Web Static Bundle:** \`Arkan-web-${VER}.zip\`
+          * **Linux Desktop:** \`Arkan-linux-x64-${VER}.tar.gz\`
+          * **Windows Desktop:** \`Arkan-Windows-x64-${VER}.zip\`
+
+          🔐 **التحقق من سلامة الملفات:** راجع ملف \`SHA256SUMS.txt\` المرفق.
+          EOF
+          sed -i "s/\${VER}/${VER}/g" release_binaries/release_notes.md
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.TAG_NAME }}
+          name: Arkan Islamic App v${{ steps.release_info.outputs.VERSION }} 🕋
+          body_path: release_binaries/release_notes.md
+          files: |
+            release_binaries/*
+          draft: ${{ github.event.inputs.is_draft || false }}
+          prerelease: ${{ github.event.inputs.is_prerelease || false }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
