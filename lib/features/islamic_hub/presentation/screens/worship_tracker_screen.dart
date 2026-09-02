@@ -21,6 +21,7 @@ class WorshipTrackerScreen extends StatelessWidget {
       appBar: AppTopBar(
         title: 'islamic.worship_tracker.title'.tr(),
         isTransparent: true,
+        showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(IconsaxPlusLinear.calendar_1),

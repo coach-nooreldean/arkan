@@ -42,6 +42,26 @@ class _SurahIndexScreenState extends State<SurahIndexScreen> with SingleTickerPr
       appBar: AppTopBar(
         title: 'islamic.quran_title'.tr(),
         isTransparent: true,
+        showBackButton: false,
+        actions: [
+          BlocBuilder<QuranCubit, QuranState>(
+            builder: (context, state) {
+              return TextButton.icon(
+                onPressed: () => context.push('/quran/read'),
+                icon: const Icon(IconsaxPlusBold.book_1, size: 18, color: Color(0xFF16A085)),
+                label: Text(
+                  'قراءة ص ${state.currentPage}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                    color: const Color(0xFF16A085),
+                  ),
+                ),
+              );
+            },
+          ),
+          SizedBox(width: 8.w),
+        ],
       ),
       body: PremiumBackground(
         child: SafeArea(
@@ -50,6 +70,95 @@ class _SurahIndexScreenState extends State<SurahIndexScreen> with SingleTickerPr
               constraints: const BoxConstraints(maxWidth: 1100),
               child: Column(
                 children: [
+                  // Quick Continue Reading Card
+                  BlocBuilder<QuranCubit, QuranState>(
+                    builder: (context, state) {
+                      final page = state.currentPage;
+                      final surah = state.currentSurah?.name ?? 'الفاتحة';
+                      final juz = state.currentJuz?.name ?? 'الجزء الأول';
+
+                      return Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                        child: InkWell(
+                          onTap: () => context.push('/quran/read'),
+                          borderRadius: BorderRadius.circular(16.r),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: isDark
+                                    ? [const Color(0xFF162529), const Color(0xFF0F1A1C)]
+                                    : [const Color(0xFFE8F8F5), const Color(0xFFD1F2EB)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(
+                                color: const Color(0xFF16A085).withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(8.w),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF16A085).withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  child: const Icon(
+                                    IconsaxPlusBold.book_saved,
+                                    color: Color(0xFF16A085),
+                                    size: 20,
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'متابعة القراءة: $surah ($juz)',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13.sp,
+                                          color: isDark ? Colors.white : const Color(0xFF165B4C),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        'اضغط للفتح المباشر لصفحة $page',
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: isDark ? Colors.white70 : const Color(0xFF16A085),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF16A085),
+                                    borderRadius: BorderRadius.circular(20.r),
+                                  ),
+                                  child: Text(
+                                    'ص $page',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   TabBar(
                     controller: _tabController,
                     indicatorColor: const Color(0xFF16A085),

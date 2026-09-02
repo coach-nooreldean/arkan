@@ -5,7 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import '../../../../core/utils/haptic_feedback_helper.dart';
 import '../../../islamic_hub/presentation/screens/islamic_hub_screen.dart';
-import '../../../islamic_hub/presentation/screens/madani_quran_screen.dart';
+import '../../../islamic_hub/presentation/screens/surah_index_screen.dart';
 import '../../../islamic_hub/presentation/screens/azkar_category_screen.dart';
 import '../../../islamic_hub/presentation/screens/worship_tracker_screen.dart';
 import '../../../islamic_hub/presentation/screens/more_screen.dart';
@@ -24,7 +24,7 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
 
   final List<Widget> _screens = const [
     IslamicHubScreen(),
-    MadaniQuranScreen(),
+    SurahIndexScreen(),
     AzkarCategoryScreen(),
     WorshipTrackerScreen(),
     MoreScreen(),
@@ -58,70 +58,76 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28.r),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                height: 68.h,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xDE111827)
-                      : const Color(0xE6FFFFFF),
-                  borderRadius: BorderRadius.circular(28.r),
-                  border: Border.all(
-                    color: isDark
-                        ? const Color(0x2EFFFFFF)
-                        : const Color(0x333551AE),
-                    width: 1.2,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 580),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28.r),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    height: 68.h,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xDE111827)
+                          : const Color(0xE6FFFFFF),
+                      borderRadius: BorderRadius.circular(28.r),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0x2EFFFFFF)
+                            : const Color(0x333551AE),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildNavItem(
+                          index: 0,
+                          label: 'nav.home'.tr(),
+                          activeIcon: IconsaxPlusBold.home_2,
+                          inactiveIcon: IconsaxPlusLinear.home_2,
+                          isDark: isDark,
+                        ),
+                        _buildNavItem(
+                          index: 1,
+                          label: 'nav.quran'.tr(),
+                          activeIcon: IconsaxPlusBold.book_1,
+                          inactiveIcon: IconsaxPlusLinear.book_1,
+                          isDark: isDark,
+                        ),
+                        _buildNavItem(
+                          index: 2,
+                          label: 'nav.azkar'.tr(),
+                          activeIcon: IconsaxPlusBold.heart,
+                          inactiveIcon: IconsaxPlusLinear.heart,
+                          isDark: isDark,
+                        ),
+                        _buildNavItem(
+                          index: 3,
+                          label: 'nav.worship'.tr(),
+                          activeIcon: IconsaxPlusBold.task_square,
+                          inactiveIcon: IconsaxPlusLinear.task_square,
+                          isDark: isDark,
+                        ),
+                        _buildNavItem(
+                          index: 4,
+                          label: 'nav.more'.tr(),
+                          activeIcon: IconsaxPlusBold.more,
+                          inactiveIcon: IconsaxPlusLinear.more,
+                          isDark: isDark,
+                        ),
+                      ],
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      index: 0,
-                      label: 'nav.home'.tr(),
-                      activeIcon: IconsaxPlusBold.home_2,
-                      inactiveIcon: IconsaxPlusLinear.home_2,
-                      isDark: isDark,
-                    ),
-                    _buildNavItem(
-                      index: 1,
-                      label: 'nav.quran'.tr(),
-                      activeIcon: IconsaxPlusBold.book_1,
-                      inactiveIcon: IconsaxPlusLinear.book_1,
-                      isDark: isDark,
-                    ),
-                    _buildNavItem(
-                      index: 2,
-                      label: 'nav.azkar'.tr(),
-                      activeIcon: IconsaxPlusBold.heart,
-                      inactiveIcon: IconsaxPlusLinear.heart,
-                      isDark: isDark,
-                    ),
-                    _buildNavItem(
-                      index: 3,
-                      label: 'nav.worship'.tr(),
-                      activeIcon: IconsaxPlusBold.task_square,
-                      inactiveIcon: IconsaxPlusLinear.task_square,
-                      isDark: isDark,
-                    ),
-                    _buildNavItem(
-                      index: 4,
-                      label: 'nav.more'.tr(),
-                      activeIcon: IconsaxPlusBold.more,
-                      inactiveIcon: IconsaxPlusLinear.more,
-                      isDark: isDark,
-                    ),
-                  ],
                 ),
               ),
             ),

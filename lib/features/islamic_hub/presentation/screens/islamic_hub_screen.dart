@@ -117,6 +117,7 @@ class _IslamicHubScreenState extends State<IslamicHubScreen> {
         appBar: AppTopBar(
           title: 'islamic.hub_title'.tr(),
           isTransparent: true,
+          showBackButton: false,
           actions: [
             IconButton(
               icon: Icon(IconsaxPlusLinear.setting_2, color: isDark ? Colors.white : cs.primary),

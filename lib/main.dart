@@ -80,21 +80,33 @@ class ArkanApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScreenUtilInit(
-      designSize: const Size(393, 852),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return MaterialApp.router(
-          title: 'أركان | Arkan',
-          debugShowCheckedModeBanner: false,
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
-          theme: buildLightTheme(primaryColorHex: '#3551AE'),
-          darkTheme: buildDarkTheme(primaryColorHex: '#3551AE'),
-          themeMode: ThemeMode.dark, // Default to obsidian dark theme
-          routerConfig: appRouter,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final screenHeight = constraints.maxHeight;
+        // On tablet / desktop / wide screens, adapt designSize so elements render at natural 1:1 scale
+        final isWideScreen = screenWidth > 600;
+        final responsiveDesignSize = isWideScreen
+            ? Size(screenWidth, screenHeight)
+            : const Size(393, 852);
+
+        return ScreenUtilInit(
+          designSize: responsiveDesignSize,
+          minTextAdapt: true,
+          splitScreenMode: true,
+          builder: (context, child) {
+            return MaterialApp.router(
+              title: 'أركان | Arkan',
+              debugShowCheckedModeBanner: false,
+              localizationsDelegates: context.localizationDelegates,
+              supportedLocales: context.supportedLocales,
+              locale: context.locale,
+              theme: buildLightTheme(primaryColorHex: '#3551AE'),
+              darkTheme: buildDarkTheme(primaryColorHex: '#3551AE'),
+              themeMode: ThemeMode.dark, // Default to obsidian dark theme
+              routerConfig: appRouter,
+            );
+          },
         );
       },
     );

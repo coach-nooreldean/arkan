@@ -20,6 +20,7 @@ final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
+    // ── Main Tab Navigation Shells ──
     GoRoute(
       path: '/',
       builder: (context, state) => const MainNavigationScaffold(),
@@ -33,23 +34,60 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const MainNavigationScaffold(initialIndex: 1),
     ),
     GoRoute(
-      path: '/madani-quran',
-      builder: (context, state) => const MadaniQuranScreen(),
-    ),
-    GoRoute(
-      path: '/surah-index',
-      builder: (context, state) => const SurahIndexScreen(),
-    ),
-    GoRoute(
-      path: '/quran-notes',
-      builder: (context, state) => const QuranNotesScreen(),
-    ),
-    GoRoute(
       path: '/azkar',
       builder: (context, state) => const MainNavigationScaffold(initialIndex: 2),
     ),
     GoRoute(
+      path: '/worship',
+      builder: (context, state) => const MainNavigationScaffold(initialIndex: 3),
+    ),
+    GoRoute(
+      path: '/more',
+      builder: (context, state) => const MainNavigationScaffold(initialIndex: 4),
+    ),
+
+    // ── Dedicated Full-Screen Pages (Push over Root Navigator to HIDE bottom bar) ──
+    GoRoute(
+      path: '/madani-quran',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const MadaniQuranScreen(),
+    ),
+    GoRoute(
+      path: '/quran/read',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const MadaniQuranScreen(),
+    ),
+    GoRoute(
+      path: '/islamic-hub/quran/read',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const MadaniQuranScreen(),
+    ),
+    GoRoute(
+      path: '/surah-index',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const SurahIndexScreen(),
+    ),
+    GoRoute(
+      path: '/quran-notes',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const QuranNotesScreen(),
+    ),
+    GoRoute(
+      path: '/islamic-hub/quran-notes',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const QuranNotesScreen(),
+    ),
+    GoRoute(
       path: '/azkar/reader/:id',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) {
+        final categoryId = state.pathParameters['id'] ?? 'morning';
+        return AzkarReaderScreen(categoryId: categoryId);
+      },
+    ),
+    GoRoute(
+      path: '/islamic-hub/azkar/reader/:id',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) {
         final categoryId = state.pathParameters['id'] ?? 'morning';
         return AzkarReaderScreen(categoryId: categoryId);
@@ -57,34 +95,65 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/tasbih',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const SmartTasbihScreen(),
+    ),
+    GoRoute(
+      path: '/islamic-hub/tasbih',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const SmartTasbihScreen(),
     ),
     GoRoute(
       path: '/qibla',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const QiblaCompassScreen(),
     ),
     GoRoute(
-      path: '/worship',
-      builder: (context, state) => const MainNavigationScaffold(initialIndex: 3),
+      path: '/islamic-hub/qibla',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const QiblaCompassScreen(),
     ),
     GoRoute(
       path: '/worship-tracker',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const WorshipTrackerScreen(),
     ),
     GoRoute(
-      path: '/more',
-      builder: (context, state) => const MainNavigationScaffold(initialIndex: 4),
+      path: '/islamic-hub/worship-tracker',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const WorshipTrackerScreen(),
     ),
     GoRoute(
       path: '/names-of-allah',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const NamesOfAllahScreen(),
+    ),
+    GoRoute(
+      path: '/islamic-hub/names-of-allah',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const NamesOfAllahScreen(),
     ),
     GoRoute(
       path: '/hadith',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const NawawiHadithsScreen(),
+    ),
+    GoRoute(
+      path: '/islamic-hub/hadith',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const NawawiHadithsScreen(),
     ),
     GoRoute(
       path: '/hadith/:id',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '');
+        return HadithDetailScreen(hadithId: id);
+      },
+    ),
+    GoRoute(
+      path: '/islamic-hub/hadith/:id',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '');
         return HadithDetailScreen(hadithId: id);
@@ -92,67 +161,38 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/khatm-dua',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const KhatmDuaScreen(),
+    ),
+    GoRoute(
+      path: '/islamic-hub/khatm-dua',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const KhatmDuaScreen(),
     ),
     GoRoute(
       path: '/prayer-times',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const PrayerTimesScreen(),
+    ),
+    GoRoute(
+      path: '/islamic-hub/prayer-times',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const PrayerTimesScreen(),
     ),
 
-    // ── Legacy / Hub Aliases ──
+    // Hub Aliases
     GoRoute(
       path: '/islamic-hub',
       builder: (context, state) => const MainNavigationScaffold(initialIndex: 0),
     ),
     GoRoute(
       path: '/islamic-hub/quran',
-      builder: (context, state) => const MainNavigationScaffold(initialIndex: 1),
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const MadaniQuranScreen(),
     ),
     GoRoute(
       path: '/islamic-hub/azkar',
       builder: (context, state) => const MainNavigationScaffold(initialIndex: 2),
-    ),
-    GoRoute(
-      path: '/islamic-hub/azkar/reader/:id',
-      builder: (context, state) {
-        final categoryId = state.pathParameters['id'] ?? 'morning';
-        return AzkarReaderScreen(categoryId: categoryId);
-      },
-    ),
-    GoRoute(
-      path: '/islamic-hub/tasbih',
-      builder: (context, state) => const SmartTasbihScreen(),
-    ),
-    GoRoute(
-      path: '/islamic-hub/qibla',
-      builder: (context, state) => const QiblaCompassScreen(),
-    ),
-    GoRoute(
-      path: '/islamic-hub/worship-tracker',
-      builder: (context, state) => const WorshipTrackerScreen(),
-    ),
-    GoRoute(
-      path: '/islamic-hub/names-of-allah',
-      builder: (context, state) => const NamesOfAllahScreen(),
-    ),
-    GoRoute(
-      path: '/islamic-hub/hadith',
-      builder: (context, state) => const NawawiHadithsScreen(),
-    ),
-    GoRoute(
-      path: '/islamic-hub/hadith/:id',
-      builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '');
-        return HadithDetailScreen(hadithId: id);
-      },
-    ),
-    GoRoute(
-      path: '/islamic-hub/khatm-dua',
-      builder: (context, state) => const KhatmDuaScreen(),
-    ),
-    GoRoute(
-      path: '/islamic-hub/prayer-times',
-      builder: (context, state) => const PrayerTimesScreen(),
     ),
   ],
 );
