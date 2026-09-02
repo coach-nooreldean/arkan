@@ -1,0 +1,45 @@
+name: Deploy Flutter Web to Vercel
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - 'web_portal/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: 🚀 Build & Deploy to Vercel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Install dependencies
+        run: flutter pub get
+
+      - name: 🌐 Build Flutter Web
+        run: flutter build web --release
+
+      - name: ⚙️ Prepare Vercel Configuration
+        run: cp vercel.json build/web/
+
+      - name: 🚀 Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        id: vercel-deployment
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./build/web

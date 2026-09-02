@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Download, Smartphone, Monitor, Globe, Check, 
-  ExternalLink, Sparkles, Terminal, FileCheck, Layers
+  Download, Smartphone, Check, Sparkles, Cpu, ShieldCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { DeviceInfo } from '../lib/deviceDetector';
@@ -32,15 +31,15 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
     setTimeout(() => setCopiedLink(null), 2500);
   };
 
-  // Release artifacts list
+  // Only the 3 official Android APK release artifacts
   const releases = [
     {
       id: 'android-universal',
       title: 'أندرويد - ملف APK الشامل (Universal)',
-      desc: 'يعمل على جميع أجهزة وهواتف أندرويد القديمة والحديثة مباشرة.',
+      desc: 'النسخة الموصى بها للجميع: تعمل مباشرة على جميع هواتف وأجهزة أندرويد بدون استثناء.',
       file: 'Arkan-1.0.0-universal.apk',
-      size: '34 MB',
-      recommended: deviceInfo.platform === 'android',
+      size: '67.4 MB',
+      recommended: true,
       platform: 'android',
       icon: Smartphone,
       accent: 'gold',
@@ -48,54 +47,24 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
     {
       id: 'android-arm64',
       title: 'أندرويد - الهواتف الحديثة (ARM64-v8a)',
-      desc: 'نسخة أصغر حجماً وأسرع أداءً مخصصة للهواتف الحديثة (آخر 6 سنوات).',
+      desc: 'حجم خفيف جداً وأداء فائق مخصص لمعظم الهواتف الحديثة (64-bit).',
       file: 'Arkan-1.0.0-arm64-v8a.apk',
-      size: '22 MB',
+      size: '26.9 MB',
+      recommended: false,
       platform: 'android',
-      icon: Smartphone,
+      icon: Cpu,
       accent: 'blue',
     },
     {
-      id: 'android-aab',
-      title: 'حزمة متجر جوجل بلاي (AAB)',
-      desc: 'الملف المخصص للرفع على Google Play Console لمطوري التطبيقات.',
-      file: 'Arkan-1.0.0.aab',
-      size: '31 MB',
+      id: 'android-armv7',
+      title: 'أندرويد - الهواتف القديمة (ARMv7a)',
+      desc: 'نسخة خفيفة متوافقة تماماً مع معالجات الهواتف الاقتصادية والقديمة (32-bit).',
+      file: 'Arkan-1.0.0-armeabi-v7a.apk',
+      size: '24.9 MB',
+      recommended: false,
       platform: 'android',
-      icon: Layers,
+      icon: Smartphone,
       accent: 'emerald',
-    },
-    {
-      id: 'windows',
-      title: 'ويندوز - حزمة محمولة (Windows 64-bit)',
-      desc: 'فك الضغط وشغّل مباشرة على ويندوز 10 و 11 بدون تثبيت.',
-      file: 'Arkan-Windows-x64-1.0.0.zip',
-      size: '28 MB',
-      recommended: deviceInfo.platform === 'windows',
-      platform: 'windows',
-      icon: Monitor,
-      accent: 'indigo',
-    },
-    {
-      id: 'linux',
-      title: 'لينكس - حزمة سطح المكتب (Linux x64)',
-      desc: 'ملف tar.gz يعمل على توزيعات Ubuntu, Debian, Arch, Fedora.',
-      file: 'Arkan-linux-x64-1.0.0.tar.gz',
-      size: '24 MB',
-      recommended: deviceInfo.platform === 'linux',
-      platform: 'linux',
-      icon: Terminal,
-      accent: 'purple',
-    },
-    {
-      id: 'web',
-      title: 'نسخة الويب الكاملة (Web PWA Bundle)',
-      desc: 'حزمة الويب الكاملة لرفعها على استضافتك الخاصة أو العمل كـ PWA.',
-      file: 'Arkan-web-1.0.0.zip',
-      size: '14 MB',
-      platform: 'web',
-      icon: Globe,
-      accent: 'cyan',
     },
   ];
 
