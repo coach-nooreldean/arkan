@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/ayah_entity.dart';
 import '../cubits/quran_cubit.dart';
 import '../cubits/khatmah_cubit.dart';
+import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
+import '../../../rewards/domain/entities/arkan_coin_transaction.dart';
 import '../widgets/madani_page_renderer.dart';
 import '../widgets/quran_audio_player_bar.dart';
 import '../widgets/quran_search_modal.dart';
@@ -742,6 +744,12 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
     return BlocListener<KhatmahCubit, KhatmahState>(
       listener: (context, kState) {
         if (kState.successMessage != null && kState.successMessage!.isNotEmpty) {
+          context.read<ArkanCoinsCubit>().awardCoins(
+            amount: 10,
+            title: 'إنجاز ورد القرآن الكريم 📖',
+            subtitle: kState.successMessage!,
+            source: ArkanCoinSource.quranWird,
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFF3551AE),

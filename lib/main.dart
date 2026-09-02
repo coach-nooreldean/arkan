@@ -17,6 +17,8 @@ import 'features/islamic_hub/presentation/cubits/khatmah_cubit.dart';
 import 'features/islamic_hub/presentation/cubits/names_of_allah_cubit.dart';
 import 'features/islamic_hub/presentation/cubits/hadith_cubit.dart';
 import 'features/islamic_hub/presentation/cubits/qibla_cubit.dart';
+import 'features/rewards/data/repositories/arkan_coins_repository_impl.dart';
+import 'features/rewards/presentation/cubits/arkan_coins_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +68,11 @@ void main() async {
             ),
             BlocProvider<QiblaCubit>(
               create: (context) => QiblaCubit(repository: repository),
+            ),
+            BlocProvider<ArkanCoinsCubit>(
+              create: (context) => ArkanCoinsCubit(
+                repository: ArkanCoinsRepositoryImpl(),
+              )..loadCoinsData(),
             ),
           ],
           child: const ArkanApp(),

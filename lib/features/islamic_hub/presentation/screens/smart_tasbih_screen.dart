@@ -7,6 +7,8 @@ import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../cubits/tasbih_cubit.dart';
 import '../widgets/tasbih_bead_counter.dart';
+import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
+import '../../../rewards/domain/entities/arkan_coin_transaction.dart';
 
 class SmartTasbihScreen extends StatelessWidget {
   const SmartTasbihScreen({super.key});
@@ -156,7 +158,19 @@ class SmartTasbihScreen extends StatelessWidget {
                     currentCount: selected.currentCount,
                     targetCount: selected.target,
                     totalCount: selected.totalAllTimeCount,
-                    onTap: () => context.read<TasbihCubit>().increment(),
+                    onTap: () {
+                      context.read<TasbihCubit>().increment();
+                      final current = selected.currentCount + 1;
+                      if (current % selected.target == 0) {
+                        context.read<ArkanCoinsCubit>().awardCoins(
+                          amount: 2,
+                          title: 'إتمام دورة تسبيح: ${selected.text}',
+                          subtitle: 'المداومة على ذكر الله بالمسبحة',
+                          source: ArkanCoinSource.tasbih,
+                          tasbihCount: selected.target,
+                        );
+                      }
+                    },
                     onReset: () => context.read<TasbihCubit>().resetCurrent(),
                   ),
 

@@ -9,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/services/sound_effects_service.dart';
 import '../cubits/prayer_times_cubit.dart';
 import '../../domain/entities/prayer_time_entity.dart';
+import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
+import '../../../rewards/domain/entities/arkan_coin_transaction.dart';
 
 class PrayerCheckinDialog extends StatefulWidget {
   final PrayerTimeItem prayer;
@@ -196,6 +198,13 @@ class _PrayerCheckinDialogState extends State<PrayerCheckinDialog> {
         InkWell(
           onTap: () {
             widget.onCheckin(true);
+            context.read<ArkanCoinsCubit>().awardCoins(
+              amount: 5,
+              title: 'صلاة ${widget.prayer.nameArabic} في وقتها',
+              subtitle: 'المحافظة على الصلاة المكتوبة',
+              source: ArkanCoinSource.prayerOnTime,
+              isFajrPrayer: widget.prayer.nameEnglish.toLowerCase() == 'fajr',
+            );
             setState(() {
               _isOnTime = true;
               _step = 1;
@@ -291,6 +300,12 @@ class _PrayerCheckinDialogState extends State<PrayerCheckinDialog> {
         InkWell(
           onTap: () {
             widget.onCheckin(false);
+            context.read<ArkanCoinsCubit>().awardCoins(
+              amount: 1,
+              title: 'صلاة ${widget.prayer.nameArabic}',
+              subtitle: 'أداء الصلاة المفروضة',
+              source: ArkanCoinSource.prayerLate,
+            );
             setState(() {
               _isOnTime = false;
               _step = 1;

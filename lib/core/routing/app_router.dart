@@ -13,6 +13,7 @@ import '../../features/islamic_hub/presentation/screens/nawawi_hadiths_screen.da
 import '../../features/islamic_hub/presentation/screens/hadith_detail_screen.dart';
 import '../../features/islamic_hub/presentation/screens/khatm_dua_screen.dart';
 import '../../features/islamic_hub/presentation/screens/prayer_times_screen.dart';
+import '../../features/rewards/presentation/screens/arkan_rewards_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -178,6 +179,11 @@ final GoRouter appRouter = GoRouter(
       path: '/islamic-hub/prayer-times',
       parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const PrayerTimesScreen(),
+    ),
+    GoRoute(
+      path: '/rewards',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const ArkanRewardsScreen(),
     ),
 
     // Hub Aliases

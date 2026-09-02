@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../rewards/presentation/widgets/arkan_coin_badge.dart';
 import '../cubits/prayer_times_cubit.dart';
 import '../cubits/quran_cubit.dart';
 import '../../domain/entities/prayer_time_entity.dart';
@@ -144,9 +145,11 @@ class _IslamicHubScreenState extends State<IslamicHubScreen> {
           isTransparent: true,
           showBackButton: false,
           actions: [
+            const ArkanCoinBadge(),
+            SizedBox(width: 4.w),
             IconButton(
               icon: Icon(IconsaxPlusLinear.setting_2, color: isDark ? Colors.white : cs.primary),
-              onPressed: () => context.push('/islamic-hub/prayer-times'),
+              onPressed: () => context.push('/prayer-times'),
             ),
             SizedBox(width: 8.w),
           ],

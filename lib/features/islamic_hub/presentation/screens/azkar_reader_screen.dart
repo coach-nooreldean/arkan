@@ -8,6 +8,8 @@ import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../cubits/azkar_cubit.dart';
 import '../../domain/entities/azkar_category_entity.dart';
+import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
+import '../../../rewards/domain/entities/arkan_coin_transaction.dart';
 
 class AzkarReaderScreen extends StatefulWidget {
   final String categoryId;
@@ -61,6 +63,14 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
   void _showCompletionModal(BuildContext context, AzkarCategoryEntity cat, int coins) {
     if (_modalShownForCurrentCompletion) return;
     _modalShownForCurrentCompletion = true;
+
+    final earned = coins > 0 ? coins : 3;
+    context.read<ArkanCoinsCubit>().awardCoins(
+      amount: earned,
+      title: 'إتمام ${cat.name}',
+      subtitle: 'المداومة على أذكار اليوم',
+      source: ArkanCoinSource.azkar,
+    );
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

@@ -6,6 +6,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../rewards/presentation/widgets/arkan_coin_badge.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -19,6 +20,10 @@ class MoreScreen extends StatelessWidget {
       appBar: AppTopBar(
         title: 'nav.more'.tr(),
         showBackButton: false,
+        actions: [
+          const ArkanCoinBadge(),
+          SizedBox(width: 12.w),
+        ],
       ),
       body: PremiumBackground(
         child: SafeArea(
@@ -94,6 +99,14 @@ class MoreScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 12.h),
 
+                _buildSettingTile(
+                  context,
+                  title: 'مكافآت وإنجازات أركان',
+                  subtitle: 'الشارات الإيمانية ورصيد كوينز الطاعات المكتسبة',
+                  icon: IconsaxPlusBold.coin,
+                  iconColor: const Color(0xFFFFB300),
+                  onTap: () => context.push('/rewards'),
+                ),
                 _buildSettingTile(
                   context,
                   title: 'islamic.qibla_title'.tr(),
