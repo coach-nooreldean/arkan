@@ -68,7 +68,7 @@ class HadithDetailScreen extends StatelessWidget {
                           '${currentHadith.hadithText}\n\n'
                           '📍 [${currentHadith.reference}]\n\n'
                           '📖 الشرح: ${currentHadith.explanation}\n\n'
-                          '#الأربعين_النووية #تطبيق_نورالدين';
+                          '#الأربعين_النووية #تطبيق_أركان';
 
                       final box = btnContext.findRenderObject() as RenderBox?;
                       final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
@@ -387,7 +387,7 @@ class HadithDetailScreen extends StatelessWidget {
                                       'عن ${currentHadith.narrator}:\n\n'
                                       '${currentHadith.hadithText}\n\n'
                                       '📍 [${currentHadith.reference}]\n\n'
-                                      '#الأربعين_النووية #تطبيق_نورالدين';
+                                      '#الأربعين_النووية #تطبيق_أركان';
 
                                   final box = btnContext.findRenderObject() as RenderBox?;
                                   final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;

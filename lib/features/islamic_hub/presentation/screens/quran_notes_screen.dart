@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/ayah_note_entity.dart';
@@ -181,6 +182,32 @@ class _QuranNotesScreenState extends State<QuranNotesScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Padding(
+          padding: EdgeInsetsDirectional.only(start: 12.w),
+          child: Center(
+            child: InkWell(
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
+              borderRadius: BorderRadius.circular(12.r),
+              child: Container(
+                width: 38.w,
+                height: 38.w,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Center(
+                  child: Icon(Icons.arrow_forward_ios_rounded, size: 18.sp),
+                ),
+              ),
+            ),
+          ),
+        ),
         title: Text('islamic.quran_notes.title'.tr(), style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [

@@ -219,7 +219,7 @@ class _NamesOfAllahScreenState extends State<NamesOfAllahScreen> {
                               return ElevatedButton.icon(
                                 onPressed: () async {
                                   HapticFeedback.lightImpact();
-                                  final shareText = 'قال تعالى: ﴿وَلِلَّهِ الْأَسْمَاءُ الْحُسْنَىٰ فَادْعُوهُ بِهَا﴾\n\n✨ اسم الله: ${name.name} (${name.transliteration})\n📖 المعنى: ${name.meaning}\n📍 الشاهد: ${name.reference}\n🌱 الثمرة: ${name.benefit}\n\n#تطبيق_نورالدين #أسماء_الله_الحسنى';
+                                  final shareText = 'قال تعالى: ﴿وَلِلَّهِ الْأَسْمَاءُ الْحُسْنَىٰ فَادْعُوهُ بِهَا﴾\n\n✨ اسم الله: ${name.name} (${name.transliteration})\n📖 المعنى: ${name.meaning}\n📍 الشاهد: ${name.reference}\n🌱 الثمرة: ${name.benefit}\n\n#تطبيق_أركان #أسماء_الله_الحسنى';
 
                                   final box = btnContext.findRenderObject() as RenderBox?;
                                   final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;

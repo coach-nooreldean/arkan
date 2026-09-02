@@ -26,8 +26,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bool canPop = context.canPop();
-    final bool showLead = showBackButton && (canPop || onPressed != null);
+    final bool showLead = showBackButton;
 
     void handleBack() {
       if (onPressed != null) {
@@ -54,17 +53,37 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-      leadingWidth: showLead ? 48.w : 16.w,
+      leadingWidth: showLead ? 52.w : 16.w,
       leading: showLead
-          ? GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: handleBack,
-              child: ColoredBox(
-                color: Colors.transparent,
-                child: Icon(
-                  IconsaxPlusLinear.arrow_left,
-                  color: theme.appBarTheme.iconTheme?.color ??
-                      theme.colorScheme.onSurface,
+          ? Padding(
+              padding: EdgeInsetsDirectional.only(start: 12.w),
+              child: Center(
+                child: InkWell(
+                  onTap: handleBack,
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: Container(
+                    width: 38.w,
+                    height: 38.w,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white10
+                            : Colors.black.withValues(alpha: 0.06),
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        IconsaxPlusLinear.arrow_right_3,
+                        size: 20.sp,
+                        color: theme.appBarTheme.iconTheme?.color ??
+                            theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             )

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
+import 'package:go_router/go_router.dart';
+import 'package:iconsax_plus/iconsax_plus.dart';
 
 class KhatmDuaScreen extends StatelessWidget {
   final void Function(int page)? onPageSelected;
@@ -56,6 +58,32 @@ class KhatmDuaScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          leading: Padding(
+            padding: EdgeInsetsDirectional.only(start: 12.w),
+            child: Center(
+              child: InkWell(
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/');
+                  }
+                },
+                borderRadius: BorderRadius.circular(12.r),
+                child: Container(
+                  width: 38.w,
+                  height: 38.w,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Center(
+                    child: Icon(IconsaxPlusLinear.arrow_right_3, size: 20.sp),
+                  ),
+                ),
+              ),
+            ),
+          ),
           title: Text('islamic.khatm_dua_title'.tr(), style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
           centerTitle: true,
           bottom: TabBar(

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/entities/ayah_entity.dart';
 import '../cubits/quran_cubit.dart';
 import '../cubits/khatmah_cubit.dart';
@@ -845,11 +846,28 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                 } else if (event.logicalKey == LogicalKeyboardKey.space) {
                   _toggleControls();
                   return KeyEventResult.handled;
+                } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/');
+                  }
+                  return KeyEventResult.handled;
                 }
               }
               return KeyEventResult.ignored;
             },
-            child: Scaffold(
+            child: PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) {
+                if (didPop) return;
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
+              child: Scaffold(
               backgroundColor: bgColor,
               body: Stack(
                 children: [
@@ -1181,8 +1199,15 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     IconButton(
-                                      icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18.sp, color: iconColor),
-                                      onPressed: () => Navigator.of(context).pop(),
+                                      icon: Icon(Icons.arrow_forward_ios_rounded, size: 18.sp, color: iconColor),
+                                      tooltip: 'رجوع',
+                                      onPressed: () {
+                                        if (context.canPop()) {
+                                          context.pop();
+                                        } else {
+                                          context.go('/');
+                                        }
+                                      },
                                     ),
                                     Expanded(
                                       child: Column(
@@ -1450,11 +1475,12 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 
   Widget _buildDailyWirdStrip(
     BuildContext context,

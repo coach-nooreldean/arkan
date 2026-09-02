@@ -8,6 +8,7 @@ import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
+import '../../../../core/constants/app_assets.dart';
 import '../cubits/prayer_times_cubit.dart';
 import '../cubits/quran_cubit.dart';
 import '../../domain/entities/prayer_time_entity.dart';
@@ -115,7 +116,31 @@ class _IslamicHubScreenState extends State<IslamicHubScreen> {
       child: Scaffold(
         extendBodyBehindAppBar: true,
         appBar: AppTopBar(
-          title: 'islamic.hub_title'.tr(),
+          title: 'app_name'.tr(),
+          titleWidget: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.r),
+                child: Image.asset(
+                  AppAssets.logo,
+                  width: 26.w,
+                  height: 26.w,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'app_name'.tr(),
+                style: TextStyle(
+                  fontFamily: 'Tajawal',
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
           isTransparent: true,
           showBackButton: false,
           actions: [
@@ -425,7 +450,7 @@ class _IslamicHubScreenState extends State<IslamicHubScreen> {
                         tooltip: 'نسخ الآية',
                         onPressed: () async {
                           HapticFeedback.lightImpact();
-                          final shareText = '$ayah\n📍 $surah\n💡 $reflection\n\n#قبس_اليوم #تطبيق_نورالدين';
+                          final shareText = '$ayah\n📍 $surah\n💡 $reflection\n\n#قبس_اليوم #تطبيق_أركان';
                           await Clipboard.setData(ClipboardData(text: shareText));
                           if (btnContext.mounted) {
                             ScaffoldMessenger.of(btnContext).clearSnackBars();
@@ -453,7 +478,7 @@ class _IslamicHubScreenState extends State<IslamicHubScreen> {
                         tooltip: 'مشاركة',
                         onPressed: () async {
                           HapticFeedback.lightImpact();
-                          final shareText = '$ayah\n📍 $surah\n💡 $reflection\n\n#قبس_اليوم #تطبيق_نورالدين';
+                          final shareText = '$ayah\n📍 $surah\n💡 $reflection\n\n#قبس_اليوم #تطبيق_أركان';
                           final box = btnContext.findRenderObject() as RenderBox?;
                           final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
 
