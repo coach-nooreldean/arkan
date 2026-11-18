@@ -48,3 +48,5 @@ app.*.map.json
 web_portal/node_modules/
 web_portal/dist/
 web_portal/.vite/
+.vercel
+.env*
