@@ -38,7 +38,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
       title: 'أندرويد - ملف APK الشامل (Universal)',
       desc: 'النسخة الموصى بها للجميع: تعمل مباشرة على جميع هواتف وأجهزة أندرويد بدون استثناء.',
       file: 'Arkan-1.1.0-universal.apk',
-      size: '67.4 MB',
+      size: '71.4 MB',
       recommended: true,
       platform: 'android',
       icon: Smartphone,
@@ -49,7 +49,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
       title: 'أندرويد - الهواتف الحديثة (ARM64-v8a)',
       desc: 'حجم خفيف جداً وأداء فائق مخصص لمعظم الهواتف الحديثة (64-bit).',
       file: 'Arkan-1.1.0-arm64-v8a.apk',
-      size: '26.9 MB',
+      size: '30.3 MB',
       recommended: false,
       platform: 'android',
       icon: Cpu,
@@ -60,7 +60,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
       title: 'أندرويد - الهواتف القديمة (ARMv7a)',
       desc: 'نسخة خفيفة متوافقة تماماً مع معالجات الهواتف الاقتصادية والقديمة (32-bit).',
       file: 'Arkan-1.1.0-armeabi-v7a.apk',
-      size: '24.9 MB',
+      size: '28.6 MB',
       recommended: false,
       platform: 'android',
       icon: Smartphone,
@@ -143,7 +143,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-base font-extrabold bg-gradient-to-r from-gold-500 via-amber-500 to-gold-600 text-slate-950 hover:from-gold-400 hover:to-amber-400 shadow-neon-gold hover:scale-[1.02] active:scale-95 transition-all duration-200"
             >
               <Download className="w-5 h-5" />
-              <span>تحميل النسخة الشاملة (67.4MB)</span>
+              <span>تحميل النسخة الشاملة (71.4MB)</span>
             </a>
           ) : (
             <a
