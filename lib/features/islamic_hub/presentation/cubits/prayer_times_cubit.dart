@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:universal_io/io.dart';
 import '../../domain/entities/prayer_time_entity.dart';
 import '../../domain/entities/prayer_log_entity.dart';
 import '../../domain/repositories/islamic_hub_repository.dart';
+import '../../../../core/services/home_widget_sync_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/app_logger.dart';
 
@@ -85,6 +89,10 @@ class PrayerTimesCubit extends Cubit<PrayerTimesState> {
   StreamSubscription<IslamicSettingsEntity>? _settingsSubscription;
   IslamicSettingsEntity? _lastSettings;
   bool _isLoading = false;
+  bool _pendingReload = false;
+  int _scheduleGeneration = 0;
+  AudioPlayer? _foregroundAudioPlayer;
+  final Set<String> _playedForegroundAdhanKeys = {};
 
   PrayerTimesCubit({required IslamicHubRepository repository})
       : _repository = repository,
@@ -109,7 +117,12 @@ class PrayerTimesCubit extends Cubit<PrayerTimesState> {
             _lastSettings!.customLatitude != settings.customLatitude ||
             _lastSettings!.customLongitude != settings.customLongitude ||
             _lastSettings!.azanSound != settings.azanSound ||
-            _lastSettings!.isEnabled != settings.isEnabled;
+            _lastSettings!.isEnabled != settings.isEnabled ||
+            _lastSettings!.asrJuristicMethod != settings.asrJuristicMethod ||
+            _lastSettings!.preAzanReminderMinutes != settings.preAzanReminderMinutes ||
+            _lastSettings!.iqamahReminderMinutes != settings.iqamahReminderMinutes ||
+            !mapEquals(_lastSettings!.prayerMinuteOffsets, settings.prayerMinuteOffsets) ||
+            !mapEquals(_lastSettings!.perPrayerAzanSound, settings.perPrayerAzanSound);
 
         _lastSettings = settings;
         if (hasChanged) {
@@ -130,11 +143,16 @@ class PrayerTimesCubit extends Cubit<PrayerTimesState> {
   Future<void> close() {
     _countdownTimer?.cancel();
     _settingsSubscription?.cancel();
+    _foregroundAudioPlayer?.dispose();
     return super.close();
   }
 
   Future<void> loadPrayerTimes({String? userId, DateTime? date}) async {
-    if (isClosed || _isLoading) return;
+    if (isClosed) return;
+    if (_isLoading) {
+      _pendingReload = true;
+      return;
+    }
     _isLoading = true;
     try {
       // If state already has prayer times, keep them while loading
@@ -195,36 +213,52 @@ class PrayerTimesCubit extends Cubit<PrayerTimesState> {
           _updateNextPrayerAndCountdown();
           _checkPendingPrayerCheckin(updatedDayTimes, logs);
           _scheduleBackgroundPrayerNotifications(updatedDayTimes);
+          unawaited(
+            HomeWidgetSyncService.syncTodayPrayerTimes(
+              updatedDayTimes,
+              updatedDayTimes.nextPrayer,
+            ),
+          );
         }
       },
     );
     } finally {
       _isLoading = false;
+      if (_pendingReload && !isClosed) {
+        _pendingReload = false;
+        unawaited(loadPrayerTimes(userId: userId, date: date));
+      }
     }
   }
 
   Future<void> _scheduleBackgroundPrayerNotifications(DayPrayerTimes? todayTimes) async {
+    final generation = ++_scheduleGeneration;
     try {
       final settings = await _repository.getSettings();
+      if (generation != _scheduleGeneration || isClosed) return;
+
       final notificationService = NotificationService();
       await notificationService.cancelPrayerNotifications();
+      if (generation != _scheduleGeneration || isClosed) return;
 
-      if (!settings.isEnabled || settings.azanSound == 'silent') {
-        AppLogger.info('🕌 [PrayerTimesCubit] Azan disabled or silent - skipped notification scheduling.');
+      if (!settings.isEnabled) {
+        AppLogger.info('🕌 [PrayerTimesCubit] Islamic notifications disabled - skipped scheduling.');
         return;
       }
 
       final now = DateTime.now();
-      int notifId = 8000;
+      int slot = 0;
 
       // Schedule for today (day 0) and the next 6 days (days 1..6)
       for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+        if (generation != _scheduleGeneration || isClosed) return;
         final targetDate = now.add(Duration(days: dayOffset));
         DayPrayerTimes dayTimes;
         if (dayOffset == 0 && todayTimes != null) {
           dayTimes = todayTimes;
         } else {
           final result = await _repository.getPrayerTimes(date: targetDate);
+          if (generation != _scheduleGeneration || isClosed) return;
           dayTimes = result.getOrElse((_) => todayTimes ?? DayPrayerTimes(
             date: targetDate,
             hijriDate: '',
@@ -238,6 +272,8 @@ class PrayerTimesCubit extends Cubit<PrayerTimesState> {
 
         for (final p in dayTimes.prayers) {
           if (p.type != PrayerType.sunrise) {
+            final prayerKey = p.nameEnglish.toLowerCase();
+            final effectiveSound = settings.perPrayerAzanSound[prayerKey] ?? settings.azanSound;
             final prayerDateTime = DateTime(
               targetDate.year,
               targetDate.month,
@@ -246,19 +282,51 @@ class PrayerTimesCubit extends Cubit<PrayerTimesState> {
               p.time.minute,
             );
 
-            if (prayerDateTime.isAfter(now)) {
+            if (effectiveSound != 'silent' && prayerDateTime.isAfter(now)) {
               await notificationService.schedulePrayerNotification(
-                id: notifId,
+                id: 8000 + slot,
                 prayerNameArabic: p.nameArabic,
                 prayerTime: prayerDateTime,
-                azanSound: settings.azanSound,
+                azanSound: effectiveSound,
               );
+              if (generation != _scheduleGeneration || isClosed) return;
             }
-            notifId++;
+
+            if (settings.preAzanReminderMinutes > 0) {
+              final preTime = prayerDateTime.subtract(
+                Duration(minutes: settings.preAzanReminderMinutes),
+              );
+              if (preTime.isAfter(now)) {
+                await notificationService.schedulePrayerAuxiliaryNotification(
+                  id: 8200 + slot,
+                  title: 'اقترب أذان ${p.nameArabic}',
+                  body: 'متبقي ${settings.preAzanReminderMinutes} دقائق على أذان ${p.nameArabic}',
+                  scheduledTime: preTime,
+                );
+                if (generation != _scheduleGeneration || isClosed) return;
+              }
+            }
+
+            if (settings.iqamahReminderMinutes > 0) {
+              final iqamahTime = prayerDateTime.add(
+                Duration(minutes: settings.iqamahReminderMinutes),
+              );
+              if (iqamahTime.isAfter(now)) {
+                await notificationService.schedulePrayerAuxiliaryNotification(
+                  id: 8400 + slot,
+                  title: 'موعد إقامة صلاة ${p.nameArabic}',
+                  body: 'حيّ على الصلاة.. حان وقت إقامة صلاة ${p.nameArabic}',
+                  scheduledTime: iqamahTime,
+                );
+                if (generation != _scheduleGeneration || isClosed) return;
+              }
+            }
+
+            slot++;
           }
         }
       }
-      AppLogger.info('🕌 [PrayerTimesCubit] Scheduled upcoming prayers for 7 days (IDs: 8000..$notifId)');
+      AppLogger.info('🕌 [PrayerTimesCubit] Scheduled upcoming prayers for 7 days (slots: $slot)');
     } catch (e) {
       AppLogger.warning('Could not schedule prayer notifications in cubit: $e');
     }
@@ -292,9 +360,68 @@ class PrayerTimesCubit extends Cubit<PrayerTimesState> {
         nextPrayer: next,
         remainingTimeToNext: remaining,
       ));
+      _checkForegroundAdhanFallback(dayTimes, now);
       if (state.pendingCheckinPrayer == null && state.dayPrayerTimes != null) {
         _checkPendingPrayerCheckin(state.dayPrayerTimes!, state.todayLogs);
       }
+    }
+  }
+
+  void _checkForegroundAdhanFallback(DayPrayerTimes dayTimes, DateTime now) {
+    final isDesktopOrWeb =
+        kIsWeb || (!kIsWeb && (Platform.isLinux || Platform.isWindows));
+    if (!isDesktopOrWeb) return;
+    final settings = _lastSettings;
+    if (settings == null || !settings.isEnabled) {
+      return;
+    }
+
+    for (final p in dayTimes.prayers) {
+      if (p.type == PrayerType.sunrise) continue;
+      final effectiveSound =
+          settings.perPrayerAzanSound[p.nameEnglish.toLowerCase()] ?? settings.azanSound;
+      if (effectiveSound == 'silent') continue;
+      if (p.time.year == now.year &&
+          p.time.month == now.month &&
+          p.time.day == now.day &&
+          p.time.hour == now.hour &&
+          p.time.minute == now.minute &&
+          now.second < 5) {
+        final key = '${now.year}-${now.month}-${now.day}_${p.nameEnglish}';
+        if (_playedForegroundAdhanKeys.add(key)) {
+          unawaited(_playForegroundAdhan(effectiveSound));
+        }
+      }
+    }
+  }
+
+  Future<void> _playForegroundAdhan(String azanSound) async {
+    try {
+      String assetPath;
+      switch (azanSound) {
+        case 'makkah':
+          assetPath = 'audio/adhan_makkah.mp3';
+          break;
+        case 'madinah':
+          assetPath = 'audio/adhan_madinah.mp3';
+          break;
+        case 'egypt':
+          assetPath = 'audio/adhan_egypt.mp3';
+          break;
+        case 'takbeerat_only':
+        case 'takbeerat':
+          assetPath = 'audio/adhan_takbeerat.mp3';
+          break;
+        case 'notification_only':
+        default:
+          assetPath = 'audio/ui_success.mp3';
+          break;
+      }
+      _foregroundAudioPlayer ??= AudioPlayer();
+      await _foregroundAudioPlayer!.stop();
+      await _foregroundAudioPlayer!.play(AssetSource(assetPath));
+    } catch (e) {
+      AppLogger.warning('Foreground Adhan playback failed: $e');
     }
   }
 

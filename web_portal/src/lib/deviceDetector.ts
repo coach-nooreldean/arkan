@@ -16,7 +16,7 @@ export function detectDevice(): DeviceInfo {
       platform: 'android',
       label: 'أندرويد',
       badge: 'APK الشامل',
-      recommendedFile: 'Arkan-1.0.0-universal.apk',
+      recommendedFile: 'Arkan-1.1.0-universal.apk',
       downloadUrl: '#releases',
       isMobile: true,
       isAndroid: true,
@@ -57,9 +57,9 @@ export function detectDevice(): DeviceInfo {
     platform,
     label,
     badge: isAndroid ? 'APK مباشر' : 'نسخة الويب',
-    recommendedFile: 'Arkan-1.0.0-universal.apk',
+    recommendedFile: 'Arkan-1.1.0-universal.apk',
     downloadUrl: isAndroid 
-      ? 'https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/Arkan-1.0.0-universal.apk'
+      ? 'https://github.com/coach-nooreldean/arkan/releases/download/v1.1.0/Arkan-1.1.0-universal.apk'
       : 'https://arkan-app.vercel.app/',
     isMobile: isAndroid || isIos,
     isAndroid,

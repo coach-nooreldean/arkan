@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
@@ -43,6 +44,9 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       backgroundColor: isTransparent ? Colors.transparent : null,
       shadowColor: Colors.transparent,
+      systemOverlayStyle: theme.brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
       title: titleWidget ??
           Text(
             title,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,10 @@ import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../rewards/presentation/widgets/arkan_coin_badge.dart';
+import '../cubits/islamic_settings_cubit.dart';
+import '../widgets/backup_restore_sheet.dart';
+import '../widgets/hijri_calendar_sheet.dart';
+import '../widgets/smart_reminders_sheet.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -152,6 +157,26 @@ class MoreScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 12.h),
 
+                BlocBuilder<IslamicSettingsCubit, IslamicSettingsState>(
+                  builder: (context, settingsState) {
+                    final mode = settingsState.settings.appThemeMode;
+                    final modeLabel = mode == 'light'
+                        ? 'theme.light'.tr()
+                        : (mode == 'dark' ? 'theme.dark'.tr() : 'theme.system'.tr());
+                    return _buildSettingTile(
+                      context,
+                      title: 'theme.title'.tr(),
+                      subtitle: '${'theme.subtitle'.tr()} • $modeLabel',
+                      icon: mode == 'light'
+                          ? IconsaxPlusBold.sun_1
+                          : (mode == 'dark'
+                              ? IconsaxPlusBold.moon
+                              : IconsaxPlusBold.mobile),
+                      iconColor: const Color(0xFF6366F1),
+                      onTap: () => _showThemePickerSheet(context),
+                    );
+                  },
+                ),
                 _buildSettingTile(
                   context,
                   title: 'مواقيت الصلاة والأذان',
@@ -167,6 +192,40 @@ class MoreScreen extends StatelessWidget {
                   icon: IconsaxPlusBold.note_2,
                   iconColor: const Color(0xFF10B981),
                   onTap: () => context.push('/quran-notes'),
+                ),
+                _buildSettingTile(
+                  context,
+                  title: 'settings.smart_reminders'.tr(),
+                  subtitle: 'منبهات أذكار الصباح والمساء والنوم والورد وسورة الكهف',
+                  icon: IconsaxPlusBold.notification_bing,
+                  iconColor: const Color(0xFF8E44AD),
+                  onTap: () => SmartRemindersSheet.show(context),
+                ),
+                _buildSettingTile(
+                  context,
+                  title: 'settings.hijri_calendar'.tr(),
+                  subtitle: 'استعرض الأيام البيض والاثنين والخميس والمناسبات الإسلامية',
+                  icon: IconsaxPlusBold.calendar_tick,
+                  iconColor: const Color(0xFFF39C12),
+                  onTap: () => HijriCalendarSheet.show(context),
+                ),
+                _buildSettingTile(
+                  context,
+                  title: 'settings.language_title'.tr(),
+                  subtitle: context.locale.languageCode == 'ar'
+                      ? 'العربية (Arabic)'
+                      : 'English (الإنجليزية)',
+                  icon: IconsaxPlusBold.language_square,
+                  iconColor: const Color(0xFF0EA5E9),
+                  onTap: () => _showLanguagePickerSheet(context),
+                ),
+                _buildSettingTile(
+                  context,
+                  title: 'settings.backup_restore'.tr(),
+                  subtitle: 'تصدير أو استعادة بياناتك وعباداتك محلياً كملف JSON',
+                  icon: IconsaxPlusBold.cloud_add,
+                  iconColor: const Color(0xFF10B981),
+                  onTap: () => BackupRestoreSheet.show(context),
                 ),
 
                 SizedBox(height: 24.h),
@@ -209,6 +268,236 @@ class MoreScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showLanguagePickerSheet(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final currentCode = context.locale.languageCode;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1B2030) : Colors.white,
+      constraints: const BoxConstraints(maxWidth: 540),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (sheetCtx) {
+        final options = [
+          (
+            locale: const Locale('ar'),
+            title: 'العربية (Arabic)',
+            subtitle: 'الواجهة الكاملة باللغة العربية',
+          ),
+          (
+            locale: const Locale('en'),
+            title: 'English (الإنجليزية)',
+            subtitle: 'Full app interface in English',
+          ),
+        ];
+
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  'settings.choose_language'.tr(),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                for (final opt in options)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 10.h),
+                    child: InkWell(
+                      onTap: () async {
+                        await context.setLocale(opt.locale);
+                        if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+                      },
+                      borderRadius: BorderRadius.circular(14.r),
+                      child: Container(
+                        padding: EdgeInsets.all(14.w),
+                        decoration: BoxDecoration(
+                          color: currentCode == opt.locale.languageCode
+                              ? const Color(0xFF0EA5E9).withValues(alpha: 0.12)
+                              : (isDark
+                                  ? const Color(0xFF161B2B)
+                                  : const Color(0xFFF8FAFC)),
+                          borderRadius: BorderRadius.circular(14.r),
+                          border: Border.all(
+                            color: currentCode == opt.locale.languageCode
+                                ? const Color(0xFF0EA5E9)
+                                : (isDark
+                                    ? const Color(0xFF252E46)
+                                    : const Color(0xFFE2E8F0)),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    opt.title,
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2.h),
+                                  Text(
+                                    opt.subtitle,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (currentCode == opt.locale.languageCode)
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: Color(0xFF0EA5E9),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showThemePickerSheet(BuildContext context) {
+    final settingsCubit = context.read<IslamicSettingsCubit>();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1B2030) : Colors.white,
+      constraints: const BoxConstraints(maxWidth: 540),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (sheetCtx) {
+        return BlocBuilder<IslamicSettingsCubit, IslamicSettingsState>(
+          bloc: settingsCubit,
+          builder: (ctx, state) {
+            final currentMode = state.settings.appThemeMode;
+            final options = [
+              (
+                mode: 'system',
+                title: 'theme.system'.tr(),
+                subtitle: 'theme.system_desc'.tr(),
+                icon: IconsaxPlusBold.mobile,
+              ),
+              (
+                mode: 'light',
+                title: 'theme.light'.tr(),
+                subtitle: 'theme.light_desc'.tr(),
+                icon: IconsaxPlusBold.sun_1,
+              ),
+              (
+                mode: 'dark',
+                title: 'theme.dark'.tr(),
+                subtitle: 'theme.dark_desc'.tr(),
+                icon: IconsaxPlusBold.moon,
+              ),
+            ];
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'theme.title'.tr(),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    ...options.map((opt) {
+                      final isSelected = currentMode == opt.mode;
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 8.h),
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14.r),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? const Color(0xFF3551AE)
+                                  : (isDark ? Colors.white12 : Colors.black12),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          tileColor: isSelected
+                              ? const Color(0xFF3551AE).withValues(alpha: 0.12)
+                              : null,
+                          leading: Icon(
+                            opt.icon,
+                            color: isSelected
+                                ? const Color(0xFF3551AE)
+                                : (isDark ? Colors.white70 : Colors.black54),
+                          ),
+                          title: Text(
+                            opt.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF1E293B),
+                            ),
+                          ),
+                          subtitle: Text(
+                            opt.subtitle,
+                            style: TextStyle(
+                              fontSize: 11.5.sp,
+                              color: isDark ? Colors.white60 : Colors.black54,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(
+                                  IconsaxPlusBold.tick_circle,
+                                  color: Color(0xFF3551AE),
+                                )
+                              : null,
+                          onTap: () {
+                            settingsCubit.updateAppThemeMode(opt.mode);
+                            Navigator.of(sheetCtx).pop();
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

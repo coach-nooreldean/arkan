@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,9 +26,21 @@ void main() async {
   await EasyLocalization.ensureInitialized();
 
   // Initialize notifications service for prayer alerts & azkar
-  await NotificationService().init(requestPermissions: true);
+  final notificationService = NotificationService();
+  notificationService.onNotificationTap = (payload) {
+    try {
+      final map = jsonDecode(payload) as Map<String, dynamic>;
+      final route = map['route'] as String?;
+      if (route != null && route.isNotEmpty) {
+        appRouter.push(route);
+      }
+    } catch (_) {}
+  };
+  await notificationService.init(requestPermissions: true);
 
   final repository = IslamicHubRepositoryImpl();
+  final initialSettings = await repository.getSettings();
+  await notificationService.syncSmartReminders(initialSettings);
 
   runApp(
     EasyLocalization(
@@ -40,7 +53,10 @@ void main() async {
         child: MultiBlocProvider(
           providers: [
             BlocProvider<IslamicSettingsCubit>(
-              create: (context) => IslamicSettingsCubit(repository: repository),
+              create: (context) => IslamicSettingsCubit(
+                repository: repository,
+                initialSettings: initialSettings,
+              ),
             ),
             BlocProvider<PrayerTimesCubit>(
               create: (context) => PrayerTimesCubit(repository: repository),
@@ -102,16 +118,21 @@ class ArkanApp extends StatelessWidget {
           minTextAdapt: true,
           splitScreenMode: true,
           builder: (context, child) {
-            return MaterialApp.router(
-              title: 'أركان | Arkan',
-              debugShowCheckedModeBanner: false,
-              localizationsDelegates: context.localizationDelegates,
-              supportedLocales: context.supportedLocales,
-              locale: context.locale,
-              theme: buildLightTheme(primaryColorHex: '#3551AE'),
-              darkTheme: buildDarkTheme(primaryColorHex: '#3551AE'),
-              themeMode: ThemeMode.dark, // Default to obsidian dark theme
-              routerConfig: appRouter,
+            return BlocSelector<IslamicSettingsCubit, IslamicSettingsState, ThemeMode>(
+              selector: (state) => state.settings.resolvedThemeMode,
+              builder: (context, themeMode) {
+                return MaterialApp.router(
+                  title: 'أركان | Arkan',
+                  debugShowCheckedModeBanner: false,
+                  localizationsDelegates: context.localizationDelegates,
+                  supportedLocales: context.supportedLocales,
+                  locale: context.locale,
+                  theme: buildLightTheme(primaryColorHex: '#3551AE'),
+                  darkTheme: buildDarkTheme(primaryColorHex: '#3551AE'),
+                  themeMode: themeMode,
+                  routerConfig: appRouter,
+                );
+              },
             );
           },
         );

@@ -21,7 +21,7 @@ export const Navbar: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-black tracking-tight text-white font-sans">أركان</span>
-                <span className="px-2 py-0.5 text-[11px] font-bold bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded-full">v1.0.0</span>
+                <span className="px-2 py-0.5 text-[11px] font-bold bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded-full">v1.1.0</span>
               </div>
               <p className="text-xs text-slate-400 font-medium">رفيقك اليومي للعبادات</p>
             </div>

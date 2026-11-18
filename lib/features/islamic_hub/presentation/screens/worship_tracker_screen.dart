@@ -4,9 +4,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
+import '../../../../core/utils/hijri_calendar_helper.dart';
 import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../cubits/worship_tracker_cubit.dart';
+import '../widgets/hijri_calendar_sheet.dart';
 
 class WorshipTrackerScreen extends StatelessWidget {
   const WorshipTrackerScreen({super.key});
@@ -23,6 +25,11 @@ class WorshipTrackerScreen extends StatelessWidget {
         isTransparent: true,
         showBackButton: false,
         actions: [
+          IconButton(
+            icon: const Icon(IconsaxPlusLinear.moon),
+            tooltip: 'التقويم الهجري وأيام الصيام',
+            onPressed: () => HijriCalendarSheet.show(context),
+          ),
           IconButton(
             icon: const Icon(IconsaxPlusLinear.calendar_1),
             onPressed: () async {
@@ -51,10 +58,11 @@ class WorshipTrackerScreen extends StatelessWidget {
               final fardCount = log.totalFardCount;
               final rawatibRakats = log.totalSunanRawatibCount;
 
+              final hijriLabel = HijriCalendarHelper.formatArabic(state.selectedDate);
               final isToday = _isSameDay(state.selectedDate, DateTime.now());
               final dateLabel = isToday
-                  ? 'اليوم (${DateFormat('d MMMM yyyy', 'ar').format(state.selectedDate)})'
-                  : DateFormat('EEEE d MMMM yyyy', 'ar').format(state.selectedDate);
+                  ? 'اليوم • $hijriLabel'
+                  : '${DateFormat('EEEE d MMMM', 'ar').format(state.selectedDate)} • $hijriLabel';
 
               return Align(
                 alignment: Alignment.topCenter,
@@ -261,6 +269,108 @@ class WorshipTrackerScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+
+                    SizedBox(height: 16.h),
+
+                    // Streak + 7-Day Consistency Chart
+                    if (state.last7Days.isNotEmpty)
+                      Container(
+                        padding: EdgeInsets.all(14.w),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181E2E) : Colors.white,
+                          borderRadius: BorderRadius.circular(18.r),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF2B3650)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'إحصائية آخر 7 أيام',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF59E0B).withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  child: Text(
+                                    '🔥 سلسلة الالتزام: ${state.streakDays} يوم',
+                                    style: TextStyle(
+                                      fontSize: 11.5.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFFD97706),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 12.h),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: state.last7Days.map((dayLog) {
+                                final pct = (dayLog.totalCompletedCount / totalActs).clamp(0.0, 1.0);
+                                final parsedDate = DateTime.tryParse(dayLog.dateKey) ?? DateTime.now();
+                                final shortDay = DateFormat('E', 'ar').format(parsedDate);
+                                final isSelected = dayLog.dateKey == log.dateKey;
+                                return Expanded(
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 14.w,
+                                        height: 44.h,
+                                        alignment: Alignment.bottomCenter,
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? Colors.white10
+                                              : const Color(0xFFE2E8F0),
+                                          borderRadius: BorderRadius.circular(6.r),
+                                        ),
+                                        child: FractionallySizedBox(
+                                          heightFactor: pct == 0 ? 0.08 : pct,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? const Color(0xFF3551AE)
+                                                  : const Color(0xFF2ECC71),
+                                              borderRadius: BorderRadius.circular(6.r),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: 4.h),
+                                      Text(
+                                        shortDay,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 9.5.sp,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                          color: isSelected
+                                              ? const Color(0xFF3551AE)
+                                              : (isDark ? Colors.white60 : Colors.black54),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
 
                     SizedBox(height: 20.h),
 

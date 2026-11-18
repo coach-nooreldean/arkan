@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -7,6 +8,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../cubits/azkar_cubit.dart';
+import '../cubits/islamic_settings_cubit.dart';
+import '../cubits/worship_tracker_cubit.dart';
 import '../../domain/entities/azkar_category_entity.dart';
 import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
 import '../../../rewards/domain/entities/arkan_coin_transaction.dart';
@@ -29,7 +32,13 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
   void initState() {
     super.initState();
     _pageController = PageController();
-    context.read<AzkarCubit>().selectCategory(widget.categoryId);
+    if (widget.categoryId == 'favorites') {
+      final favIds =
+          context.read<IslamicSettingsCubit>().state.settings.favoriteAzkarIds;
+      context.read<AzkarCubit>().selectFavoritesCategory(favIds);
+    } else {
+      context.read<AzkarCubit>().selectCategory(widget.categoryId);
+    }
   }
 
   @override
@@ -71,6 +80,9 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
       subtitle: 'المداومة على أذكار اليوم',
       source: ArkanCoinSource.azkar,
     );
+    try {
+      context.read<WorshipTrackerCubit>().markAzkarCategoryCompleted(cat.id);
+    } catch (_) {}
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -201,74 +213,152 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return BlocConsumer<AzkarCubit, AzkarState>(
-      listenWhen: (prev, current) =>
-          prev.earnedCoinsLastAction != current.earnedCoinsLastAction &&
-          current.earnedCoinsLastAction > 0,
-      listener: (context, state) {
-        if (state.earnedCoinsLastAction > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✨ تقبل الله طاعتكم وأثابكم خيراً على إتمام الأذكار'),
-              backgroundColor: Color(0xFF3551AE),
-            ),
-          );
-        }
-      },
-      builder: (context, state) {
-        final cat = state.categories.where((c) => c.id == widget.categoryId).firstOrNull;
+    return BlocBuilder<IslamicSettingsCubit, IslamicSettingsState>(
+      builder: (context, settingsState) {
+        final fontScale = settingsState.settings.azkarFontScale;
+        final favoriteIds = settingsState.settings.favoriteAzkarIds;
 
-        if (cat == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+        return BlocConsumer<AzkarCubit, AzkarState>(
+          listenWhen: (prev, current) =>
+              prev.earnedCoinsLastAction != current.earnedCoinsLastAction &&
+              current.earnedCoinsLastAction > 0,
+          listener: (context, state) {
+            if (state.earnedCoinsLastAction > 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✨ تقبل الله طاعتكم وأثابكم خيراً على إتمام الأذكار'),
+                  backgroundColor: Color(0xFF3551AE),
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            final AzkarCategoryEntity? cat;
+            if (widget.categoryId == 'favorites') {
+              cat = state.selectedCategory?.id == 'favorites'
+                  ? state.selectedCategory
+                  : context.read<AzkarCubit>().buildFavoritesCategory(favoriteIds);
+            } else {
+              cat = state.categories.where((c) => c.id == widget.categoryId).firstOrNull;
+            }
 
-        final items = cat.items;
-        final progress = cat.progressPercentage;
-        final isCategoryDone = cat.isCompleted;
+            if (cat == null) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppTopBar(
-            title: cat.name,
-            isTransparent: true,
-            actions: [
-              IconButton(
-                icon: const Icon(IconsaxPlusLinear.refresh),
-                tooltip: 'islamic.azkar_reader.reset_tooltip'.tr(),
-                onPressed: () {
-                  setState(() {
-                    _modalShownForCurrentCompletion = false;
-                  });
-                  context.read<AzkarCubit>().resetCategoryProgress(cat.id);
-                  if (_pageController.hasClients) {
-                    _pageController.jumpToPage(0);
-                  }
-                },
+            if (cat.items.isEmpty) {
+              return Scaffold(
+                appBar: AppTopBar(
+                  title: cat.name,
+                  isTransparent: true,
+                ),
+                body: PremiumBackground(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.w),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            IconsaxPlusLinear.heart_slash,
+                            size: 52.sp,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 14.h),
+                          Text(
+                            'لا توجد أذكار مفضلة حتى الآن',
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('العودة للأذكار'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final items = cat.items;
+            final safeIndex = _currentIndex.clamp(0, items.length - 1);
+            final progress = cat.progressPercentage;
+            final isCategoryDone = cat.isCompleted;
+
+            return Scaffold(
+              extendBodyBehindAppBar: true,
+              appBar: AppTopBar(
+                title: cat.name,
+                isTransparent: true,
+                actions: [
+                  TextButton(
+                    onPressed: () => context
+                        .read<IslamicSettingsCubit>()
+                        .updateAzkarFontScale(fontScale - 0.1),
+                    style: TextButton.styleFrom(
+                      minimumSize: Size(36.w, 36.w),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Text(
+                      'A-',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context
+                        .read<IslamicSettingsCubit>()
+                        .updateAzkarFontScale(fontScale + 0.1),
+                    style: TextButton.styleFrom(
+                      minimumSize: Size(36.w, 36.w),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Text(
+                      'A+',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15.sp),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(IconsaxPlusLinear.refresh),
+                    tooltip: 'islamic.azkar_reader.reset_tooltip'.tr(),
+                    onPressed: () {
+                      setState(() {
+                        _modalShownForCurrentCompletion = false;
+                      });
+                      context.read<AzkarCubit>().resetCategoryProgress(cat!.id);
+                      if (_pageController.hasClients) {
+                        _pageController.jumpToPage(0);
+                      }
+                    },
+                  ),
+                  SizedBox(width: 8.w),
+                ],
               ),
-              SizedBox(width: 8.w),
-            ],
-          ),
-          body: PremiumBackground(
-            child: SafeArea(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 880),
-                  child: Column(
-                    children: [
-                      // Top Linear Progress Bar
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              body: PremiumBackground(
+                child: SafeArea(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 880),
+                      child: Column(
+                        children: [
+                          // Top Linear Progress Bar
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'الذكر ${_currentIndex + 1} من ${items.length}',
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'الذكر ${safeIndex + 1} من ${items.length}',
                                   style: TextStyle(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.bold,
@@ -343,7 +433,7 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
                                       ),
                                       child: Column(
                                         children: [
-                                          // Top Share & Copy row
+                                          // Top Share, Copy & Favorite row
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
@@ -363,12 +453,55 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
                                                   ),
                                                 ),
                                               ),
-                                              IconButton(
-                                                icon: Icon(IconsaxPlusLinear.share, size: 18.sp),
-                                                tooltip: 'مشاركة',
-                                                onPressed: () {
-                                                  Share.share('${item.text}\n\n${item.reward ?? ''}');
-                                                },
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: Icon(
+                                                      favoriteIds.contains(item.id)
+                                                          ? IconsaxPlusBold.heart
+                                                          : IconsaxPlusLinear.heart,
+                                                      size: 18.sp,
+                                                      color: favoriteIds.contains(item.id)
+                                                          ? const Color(0xFFE11D48)
+                                                          : null,
+                                                    ),
+                                                    tooltip: favoriteIds.contains(item.id)
+                                                        ? 'إزالة من المفضلة'
+                                                        : 'إضافة للمفضلة',
+                                                    onPressed: () {
+                                                      context
+                                                          .read<IslamicSettingsCubit>()
+                                                          .toggleFavoriteAzkar(item.id);
+                                                    },
+                                                  ),
+                                                  IconButton(
+                                                    icon: Icon(IconsaxPlusLinear.copy, size: 18.sp),
+                                                    tooltip: 'common.copy'.tr(),
+                                                    onPressed: () async {
+                                                      final copiedText =
+                                                          '${item.text}${item.reward != null ? '\n\n${item.reward}' : ''}';
+                                                      await Clipboard.setData(
+                                                        ClipboardData(text: copiedText),
+                                                      );
+                                                      if (!context.mounted) return;
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text('common.copied'.tr()),
+                                                          behavior: SnackBarBehavior.floating,
+                                                          duration: const Duration(seconds: 2),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                  IconButton(
+                                                    icon: Icon(IconsaxPlusLinear.share, size: 18.sp),
+                                                    tooltip: 'مشاركة',
+                                                    onPressed: () {
+                                                      Share.share('${item.text}\n\n${item.reward ?? ''}');
+                                                    },
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
@@ -379,7 +512,7 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
                                           Text(
                                             item.text,
                                             style: TextStyle(
-                                              fontSize: 19.sp,
+                                              fontSize: (19 * fontScale).sp,
                                               fontWeight: FontWeight.w600,
                                               height: 1.8,
                                               color: isDark ? Colors.white : const Color(0xFF1E293B),
@@ -524,11 +657,11 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
                               ),
                             ),
                             SizedBox(width: 12.w),
-                            if (isCategoryDone || _currentIndex == items.length - 1)
+                            if (isCategoryDone || safeIndex == items.length - 1)
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: () {
-                                    _showCompletionModal(context, cat, state.earnedCoinsLastAction);
+                                    _showCompletionModal(context, cat!, state.earnedCoinsLastAction);
                                   },
                                   icon: const Icon(Icons.check_circle_rounded, size: 16),
                                   label: Text(
@@ -549,7 +682,7 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
                             else
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: _currentIndex < items.length - 1
+                                  onPressed: safeIndex < items.length - 1
                                       ? () => _pageController.nextPage(
                                             duration: const Duration(milliseconds: 300),
                                             curve: Curves.easeInOut,
@@ -578,6 +711,8 @@ class _AzkarReaderScreenState extends State<AzkarReaderScreen> {
               ),
             ),
           ),
+        );
+          },
         );
       },
     );

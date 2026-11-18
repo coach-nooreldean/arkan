@@ -73,6 +73,32 @@ class IslamicLocalDataSourceImpl implements IslamicLocalDataSource {
     return const [];
   }
 
+  List<String> _parseStringList(dynamic val) {
+    if (val is List) {
+      return val.map((e) => e.toString()).toList();
+    }
+    return const [];
+  }
+
+  Map<String, int> _parseIntMap(dynamic val) {
+    if (val is Map) {
+      return val.map(
+        (key, value) => MapEntry(
+          key.toString(),
+          value is num ? value.toInt() : (int.tryParse(value.toString()) ?? 0),
+        ),
+      );
+    }
+    return const {};
+  }
+
+  Map<String, String> _parseStringMap(dynamic val) {
+    if (val is Map) {
+      return val.map((key, value) => MapEntry(key.toString(), value.toString()));
+    }
+    return const {};
+  }
+
   IslamicSettingsEntity _settingsFromMap(Map<String, dynamic> map) {
     return IslamicSettingsEntity(
       isEnabled: _parseBool(map['is_enabled'], defaultValue: true),
@@ -92,6 +118,37 @@ class IslamicLocalDataSourceImpl implements IslamicLocalDataSource {
       quranSelectedReciter: map['quran_selected_reciter'] as String? ?? 'alafasy',
       quranAyahRepeat: (map['quran_ayah_repeat'] as num?)?.toInt() ?? 1,
       quranRangeRepeat: (map['quran_range_repeat'] as num?)?.toInt() ?? 1,
+      appThemeMode: map['app_theme_mode'] as String? ?? 'system',
+      hasChosenThemeOnStartup:
+          _parseBool(map['has_chosen_theme_on_startup'], defaultValue: false),
+      asrJuristicMethod: (map['asr_juristic_method'] as num?)?.toInt() ?? 0,
+      preAzanReminderMinutes:
+          (map['pre_azan_reminder_minutes'] as num?)?.toInt() ?? 0,
+      iqamahReminderMinutes:
+          (map['iqamah_reminder_minutes'] as num?)?.toInt() ?? 0,
+      prayerMinuteOffsets: _parseIntMap(map['prayer_minute_offsets']),
+      perPrayerAzanSound: _parseStringMap(map['per_prayer_azan_sound']),
+      morningAzkarReminderEnabled:
+          _parseBool(map['morning_azkar_reminder_enabled'], defaultValue: true),
+      morningAzkarHour: (map['morning_azkar_hour'] as num?)?.toInt() ?? 7,
+      morningAzkarMinute: (map['morning_azkar_minute'] as num?)?.toInt() ?? 0,
+      eveningAzkarReminderEnabled:
+          _parseBool(map['evening_azkar_reminder_enabled'], defaultValue: true),
+      eveningAzkarHour: (map['evening_azkar_hour'] as num?)?.toInt() ?? 17,
+      eveningAzkarMinute: (map['evening_azkar_minute'] as num?)?.toInt() ?? 30,
+      sleepAzkarReminderEnabled:
+          _parseBool(map['sleep_azkar_reminder_enabled'], defaultValue: false),
+      sleepAzkarHour: (map['sleep_azkar_hour'] as num?)?.toInt() ?? 22,
+      sleepAzkarMinute: (map['sleep_azkar_minute'] as num?)?.toInt() ?? 30,
+      quranWirdReminderEnabled:
+          _parseBool(map['quran_wird_reminder_enabled'], defaultValue: true),
+      quranWirdHour: (map['quran_wird_hour'] as num?)?.toInt() ?? 20,
+      quranWirdMinute: (map['quran_wird_minute'] as num?)?.toInt() ?? 0,
+      fridayKahfReminderEnabled:
+          _parseBool(map['friday_kahf_reminder_enabled'], defaultValue: true),
+      azkarFontScale:
+          ((map['azkar_font_scale'] as num?)?.toDouble() ?? 1.0).clamp(0.85, 1.6),
+      favoriteAzkarIds: _parseStringList(map['favorite_azkar_ids']),
     );
   }
 
@@ -114,6 +171,28 @@ class IslamicLocalDataSourceImpl implements IslamicLocalDataSource {
       'quran_selected_reciter': settings.quranSelectedReciter,
       'quran_ayah_repeat': settings.quranAyahRepeat,
       'quran_range_repeat': settings.quranRangeRepeat,
+      'app_theme_mode': settings.appThemeMode,
+      'has_chosen_theme_on_startup': settings.hasChosenThemeOnStartup,
+      'asr_juristic_method': settings.asrJuristicMethod,
+      'pre_azan_reminder_minutes': settings.preAzanReminderMinutes,
+      'iqamah_reminder_minutes': settings.iqamahReminderMinutes,
+      'prayer_minute_offsets': settings.prayerMinuteOffsets,
+      'per_prayer_azan_sound': settings.perPrayerAzanSound,
+      'morning_azkar_reminder_enabled': settings.morningAzkarReminderEnabled,
+      'morning_azkar_hour': settings.morningAzkarHour,
+      'morning_azkar_minute': settings.morningAzkarMinute,
+      'evening_azkar_reminder_enabled': settings.eveningAzkarReminderEnabled,
+      'evening_azkar_hour': settings.eveningAzkarHour,
+      'evening_azkar_minute': settings.eveningAzkarMinute,
+      'sleep_azkar_reminder_enabled': settings.sleepAzkarReminderEnabled,
+      'sleep_azkar_hour': settings.sleepAzkarHour,
+      'sleep_azkar_minute': settings.sleepAzkarMinute,
+      'quran_wird_reminder_enabled': settings.quranWirdReminderEnabled,
+      'quran_wird_hour': settings.quranWirdHour,
+      'quran_wird_minute': settings.quranWirdMinute,
+      'friday_kahf_reminder_enabled': settings.fridayKahfReminderEnabled,
+      'azkar_font_scale': settings.azkarFontScale,
+      'favorite_azkar_ids': settings.favoriteAzkarIds,
     };
   }
 
@@ -139,10 +218,9 @@ class IslamicLocalDataSourceImpl implements IslamicLocalDataSource {
   @override
   Future<void> saveSettings(IslamicSettingsEntity settings) async {
     _cachedSettings = settings;
-    _controller.add(settings);
-
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keySettings, jsonEncode(_settingsToMap(settings)));
+    _controller.add(settings);
   }
 
   @override

@@ -92,7 +92,7 @@ class SoundEffectsService {
   /// Celebratory harmonic chime for streaks, level-ups, and workout completion
   Future<void> playStreakUp({bool haptic = true}) async {
     await _playSound(
-      'audio/ui_streak.mp3',
+      'audio/ui_coin.mp3',
       haptic: haptic,
       hapticType: HapticFeedbackType.heavy,
     );
@@ -101,7 +101,7 @@ class SoundEffectsService {
   /// Motivating chime when workout rest timer completes
   Future<void> playRestComplete({bool haptic = true}) async {
     await _playSound(
-      'audio/rest_complete.mp3',
+      'audio/ui_success.mp3',
       haptic: haptic,
       hapticType: HapticFeedbackType.medium,
     );
@@ -110,7 +110,7 @@ class SoundEffectsService {
   /// Zen bronze bell when pomodoro timer completes
   Future<void> playPomodoroComplete({bool haptic = true}) async {
     await _playSound(
-      'audio/pomodoro_complete.mp3',
+      'audio/ui_success.mp3',
       haptic: haptic,
       hapticType: HapticFeedbackType.medium,
     );
@@ -119,7 +119,7 @@ class SoundEffectsService {
   /// Notification chime
   Future<void> playNotificationSound({bool haptic = true}) async {
     await _playSound(
-      'audio/notification_sound.mp3',
+      'audio/ui_success.mp3',
       haptic: haptic,
       hapticType: HapticFeedbackType.light,
     );
@@ -128,7 +128,7 @@ class SoundEffectsService {
   /// Calm singing bowl tone for meditation and stress relief
   Future<void> playSosChime({bool haptic = true}) async {
     await _playSound(
-      'audio/sos_chime.mp3',
+      'audio/ui_success.mp3',
       haptic: haptic,
       hapticType: HapticFeedbackType.light,
     );

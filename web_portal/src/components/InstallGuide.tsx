@@ -6,7 +6,7 @@ export const InstallGuide: React.FC = () => {
     {
       num: '01',
       title: 'تحميل ملف الـ APK المباشر',
-      desc: 'انقر على زر التحميل بالأعلى لتنزيل ملف Arkan-1.0.0-universal.apk على هاتفك.',
+      desc: 'انقر على زر التحميل بالأعلى لتنزيل ملف Arkan-1.1.0-universal.apk على هاتفك.',
       badge: 'الخطوة الأولى',
     },
     {

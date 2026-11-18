@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/utils/hijri_calendar_helper.dart';
 import '../../domain/entities/prayer_time_entity.dart';
 import '../models/prayer_times_model.dart';
 
@@ -15,6 +16,7 @@ abstract class PrayerRemoteDataSource {
     double? latitude,
     double? longitude,
     String method = 'Egyptian',
+    int asrSchool = 0,
   });
 }
 
@@ -58,6 +60,7 @@ class PrayerRemoteDataSourceImpl implements PrayerRemoteDataSource {
     double? latitude,
     double? longitude,
     String method = 'Egyptian',
+    int asrSchool = 0,
   }) async {
     final targetDate = date ?? DateTime.now();
     final dateStr = DateFormat('dd-MM-yyyy').format(targetDate);
@@ -66,7 +69,8 @@ class PrayerRemoteDataSourceImpl implements PrayerRemoteDataSource {
         ? '$city ($country)'
         : '$city, $country';
 
-    final cacheKey = 'prayer_cache_${dateStr}_${city}_${country}_${methodId}_${latitude ?? 0}_${longitude ?? 0}';
+    final cacheKey =
+        'prayer_cache_${dateStr}_${city}_${country}_${methodId}_${asrSchool}_${latitude ?? 0}_${longitude ?? 0}';
 
     // 1. Check in-memory cache first
     if (_memoryCache.containsKey(cacheKey)) {
@@ -79,7 +83,10 @@ class PrayerRemoteDataSourceImpl implements PrayerRemoteDataSource {
       final cachedJson = prefs.getString(cacheKey);
       if (cachedJson != null) {
         final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
-        final cachedModel = PrayerTimesModel.fromAladhanJson(decoded, locationName: locationLabel);
+        final cachedModel = PrayerTimesModel.fromAladhanJson(
+          decoded,
+          locationName: locationLabel,
+        );
         _memoryCache[cacheKey] = cachedModel;
         return cachedModel;
       }
@@ -95,6 +102,7 @@ class PrayerRemoteDataSourceImpl implements PrayerRemoteDataSource {
             'latitude': latitude,
             'longitude': longitude,
             'method': methodId,
+            'school': asrSchool,
           },
           options: Options(receiveTimeout: const Duration(seconds: 10)),
         );
@@ -106,6 +114,7 @@ class PrayerRemoteDataSourceImpl implements PrayerRemoteDataSource {
             'city': city,
             'country': country,
             'method': methodId,
+            'school': asrSchool,
           },
           options: Options(receiveTimeout: const Duration(seconds: 10)),
         );
@@ -118,7 +127,6 @@ class PrayerRemoteDataSourceImpl implements PrayerRemoteDataSource {
           locationName: locationLabel,
         );
 
-        // Store in memory & disk cache
         _memoryCache[cacheKey] = parsed;
         try {
           final prefs = await SharedPreferences.getInstance();
@@ -128,93 +136,155 @@ class PrayerRemoteDataSourceImpl implements PrayerRemoteDataSource {
         return parsed;
       }
     } catch (e) {
-      AppLogger.warning('Aladhan API fetch failed, falling back to offline calculation: $e');
+      AppLogger.warning(
+        'Aladhan API fetch failed, falling back to offline calculation: $e',
+      );
     }
 
     // Offline Mathematical Fallback Calculation
-    final fallback = _calculateOfflinePrayerTimes(
+    final fallback = calculateOfflinePrayerTimes(
       targetDate,
-      lat: latitude ?? 30.0444, // Default Cairo latitude
-      lng: longitude ?? 31.2357, // Default Cairo longitude
-      locationName: city.isNotEmpty ? city : 'Cairo, Egypt',
+      lat: latitude ?? 30.0444,
+      lng: longitude ?? 31.2357,
+      locationName: city.isNotEmpty ? '$city, $country' : 'Cairo, Egypt',
+      method: method,
+      asrSchool: asrSchool,
     );
     _memoryCache[cacheKey] = fallback;
     return fallback;
   }
 
-  DayPrayerTimes _calculateOfflinePrayerTimes(
+  static ({double fajrDeg, double ishaDeg, int? ishaMinutesAfterMaghrib})
+      _methodAngles(String method) {
+    switch (method.toLowerCase()) {
+      case 'ummalqura':
+      case 'makkah':
+        return (fajrDeg: 18.5, ishaDeg: 18.0, ishaMinutesAfterMaghrib: 90);
+      case 'muslimworldleague':
+      case 'mwl':
+        return (fajrDeg: 18.0, ishaDeg: 17.0, ishaMinutesAfterMaghrib: null);
+      case 'karachi':
+        return (fajrDeg: 18.0, ishaDeg: 18.0, ishaMinutesAfterMaghrib: null);
+      case 'isna':
+        return (fajrDeg: 15.0, ishaDeg: 15.0, ishaMinutesAfterMaghrib: null);
+      case 'egyptian':
+      case 'egypt':
+      default:
+        return (fajrDeg: 19.5, ishaDeg: 17.5, ishaMinutesAfterMaghrib: null);
+    }
+  }
+
+  /// Astronomical prayer time calculation for offline use supporting calculation
+  /// methods, Shafi (0) vs Hanafi (1) Asr juristic school, and Hijri conversion.
+  static DayPrayerTimes calculateOfflinePrayerTimes(
     DateTime date, {
     required double lat,
     required double lng,
     required String locationName,
+    String method = 'Egyptian',
+    int asrSchool = 0,
   }) {
-    // Standard astronomical calculation for offline reliability
     final dayOfYear = int.parse(DateFormat('D').format(date));
     final b = 2 * math.pi * (dayOfYear - 81) / 365;
     final eot = 9.87 * math.sin(2 * b) - 7.53 * math.cos(b) - 1.5 * math.sin(b);
-    final declination = 23.45 * math.sin(2 * math.pi * (284 + dayOfYear) / 365) * (math.pi / 180);
+    final declination =
+        23.45 * math.sin(2 * math.pi * (284 + dayOfYear) / 365) * (math.pi / 180);
 
-    // Solar noon in hours (approx timezone +2/3)
     final timezoneOffset = date.timeZoneOffset.inMinutes / 60.0;
     final noon = 12 + timezoneOffset - (lng / 15.0) - (eot / 60.0);
-
     final latRad = lat * (math.pi / 180);
 
-    // Fajr (-19.5 deg for Egyptian survey)
-    const fajrAngle = -19.5 * (math.pi / 180);
-    final fajrCosH = (math.sin(fajrAngle) - math.sin(latRad) * math.sin(declination)) /
-        (math.cos(latRad) * math.cos(declination));
-    final fajrHourAngle = (math.acos(fajrCosH.clamp(-1.0, 1.0)) * 180 / math.pi) / 15.0;
-    final fajrTime = noon - fajrHourAngle;
+    double hourAngleForAltitude(double altitudeRad) {
+      final cosH = (math.sin(altitudeRad) - math.sin(latRad) * math.sin(declination)) /
+          (math.cos(latRad) * math.cos(declination));
+      return (math.acos(cosH.clamp(-1.0, 1.0)) * 180 / math.pi) / 15.0;
+    }
 
-    // Sunrise (-0.833 deg)
-    const sunriseAngle = -0.833 * (math.pi / 180);
-    final sunriseCosH = (math.sin(sunriseAngle) - math.sin(latRad) * math.sin(declination)) /
-        (math.cos(latRad) * math.cos(declination));
-    final sunriseHourAngle = (math.acos(sunriseCosH.clamp(-1.0, 1.0)) * 180 / math.pi) / 15.0;
-    final sunriseTime = noon - sunriseHourAngle;
+    final angles = _methodAngles(method);
+
+    // Fajr
+    final fajrTime = noon - hourAngleForAltitude(-angles.fajrDeg * (math.pi / 180));
+
+    // Sunrise / Sunset (-0.833 deg)
+    final sunHorizonH = hourAngleForAltitude(-0.833 * (math.pi / 180));
+    final sunriseTime = noon - sunHorizonH;
 
     // Dhuhr
-    final dhuhrTime = noon + (2 / 60.0); // +2 mins after solar noon
+    final dhuhrTime = noon + (2 / 60.0);
 
-    // Asr (Shafi/Standard shadow = 1)
-    final asrAngle = -math.atan(1 + math.tan((lat * math.pi / 180) - declination).abs());
-    final asrCosH = (math.sin(asrAngle) - math.sin(latRad) * math.sin(declination)) /
-        (math.cos(latRad) * math.cos(declination));
-    final asrHourAngle = (math.acos(asrCosH.clamp(-1.0, 1.0)) * 180 / math.pi) / 15.0;
-    final asrTime = noon + asrHourAngle;
+    // Asr: shadowFactor = 1 (Shafi/Jumhur) or 2 (Hanafi), positive altitude above horizon
+    final shadowFactor = asrSchool == 1 ? 2.0 : 1.0;
+    final asrAltitude = math.atan(
+      1.0 / (shadowFactor + math.tan((latRad - declination).abs())),
+    );
+    final asrTime = noon + hourAngleForAltitude(asrAltitude);
 
-    // Maghrib (Sunset)
-    final maghribTime = noon + sunriseHourAngle + (2 / 60.0);
+    // Maghrib
+    final maghribTime = noon + sunHorizonH + (2 / 60.0);
 
-    // Isha (-17.5 deg for Egyptian survey)
-    const ishaAngle = -17.5 * (math.pi / 180);
-    final ishaCosH = (math.sin(ishaAngle) - math.sin(latRad) * math.sin(declination)) /
-        (math.cos(latRad) * math.cos(declination));
-    final ishaHourAngle = (math.acos(ishaCosH.clamp(-1.0, 1.0)) * 180 / math.pi) / 15.0;
-    final ishaTime = noon + ishaHourAngle;
+    // Isha
+    final ishaTime = angles.ishaMinutesAfterMaghrib != null
+        ? maghribTime + (angles.ishaMinutesAfterMaghrib! / 60.0)
+        : noon + hourAngleForAltitude(-angles.ishaDeg * (math.pi / 180));
 
     DateTime hoursToDate(double hours) {
-      final h = hours.floor() % 24;
-      final m = ((hours - hours.floor()) * 60).round() % 60;
+      final normalized = ((hours % 24.0) + 24.0) % 24.0;
+      var h = normalized.floor();
+      var m = ((normalized - h) * 60).round();
+      if (m >= 60) {
+        m = 0;
+        h = (h + 1) % 24;
+      }
       return DateTime(date.year, date.month, date.day, h, m);
     }
 
+    final hijri = HijriCalendarHelper.fromGregorian(date);
+
     final prayers = <PrayerTimeItem>[
-      PrayerTimeItem(type: PrayerType.fajr, nameArabic: 'الفجر', nameEnglish: 'Fajr', time: hoursToDate(fajrTime)),
-      PrayerTimeItem(type: PrayerType.sunrise, nameArabic: 'الشروق', nameEnglish: 'Sunrise', time: hoursToDate(sunriseTime)),
-      PrayerTimeItem(type: PrayerType.dhuhr, nameArabic: 'الظهر', nameEnglish: 'Dhuhr', time: hoursToDate(dhuhrTime)),
-      PrayerTimeItem(type: PrayerType.asr, nameArabic: 'العصر', nameEnglish: 'Asr', time: hoursToDate(asrTime)),
-      PrayerTimeItem(type: PrayerType.maghrib, nameArabic: 'المغرب', nameEnglish: 'Maghrib', time: hoursToDate(maghribTime)),
-      PrayerTimeItem(type: PrayerType.isha, nameArabic: 'العشاء', nameEnglish: 'Isha', time: hoursToDate(ishaTime)),
+      PrayerTimeItem(
+        type: PrayerType.fajr,
+        nameArabic: 'الفجر',
+        nameEnglish: 'Fajr',
+        time: hoursToDate(fajrTime),
+      ),
+      PrayerTimeItem(
+        type: PrayerType.sunrise,
+        nameArabic: 'الشروق',
+        nameEnglish: 'Sunrise',
+        time: hoursToDate(sunriseTime),
+      ),
+      PrayerTimeItem(
+        type: PrayerType.dhuhr,
+        nameArabic: 'الظهر',
+        nameEnglish: 'Dhuhr',
+        time: hoursToDate(dhuhrTime),
+      ),
+      PrayerTimeItem(
+        type: PrayerType.asr,
+        nameArabic: 'العصر',
+        nameEnglish: 'Asr',
+        time: hoursToDate(asrTime),
+      ),
+      PrayerTimeItem(
+        type: PrayerType.maghrib,
+        nameArabic: 'المغرب',
+        nameEnglish: 'Maghrib',
+        time: hoursToDate(maghribTime),
+      ),
+      PrayerTimeItem(
+        type: PrayerType.isha,
+        nameArabic: 'العشاء',
+        nameEnglish: 'Isha',
+        time: hoursToDate(ishaTime),
+      ),
     ];
 
     return DayPrayerTimes(
       date: date,
-      hijriDate: '',
-      hijriDay: '',
-      hijriMonth: '',
-      hijriYear: '',
+      hijriDate: hijri.formattedNumeric,
+      hijriDay: hijri.day.toString(),
+      hijriMonth: hijri.monthNameAr,
+      hijriYear: hijri.year.toString(),
       prayers: prayers,
       locationName: locationName,
     );

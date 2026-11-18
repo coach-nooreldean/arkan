@@ -11,6 +11,20 @@ class AyahLineSegment extends Equatable {
     this.widthRatio = 1.0,
   });
 
+  Map<String, dynamic> toJson() => {
+        'line': line,
+        'leftRatio': leftRatio,
+        'widthRatio': widthRatio,
+      };
+
+  factory AyahLineSegment.fromJson(Map<String, dynamic> json) {
+    return AyahLineSegment(
+      line: (json['line'] as num?)?.toInt() ?? 1,
+      leftRatio: (json['leftRatio'] as num?)?.toDouble() ?? 0.0,
+      widthRatio: (json['widthRatio'] as num?)?.toDouble() ?? 1.0,
+    );
+  }
+
   @override
   List<Object?> get props => [line, leftRatio, widthRatio];
 }
@@ -43,6 +57,44 @@ class AyahEntity extends Equatable {
     this.lines = const [],
     this.lineSegments = const [],
   });
+
+  Map<String, dynamic> toJson() => {
+        'number': number,
+        'surahNumber': surahNumber,
+        'numberInSurah': numberInSurah,
+        'page': page,
+        'juz': juz,
+        'hizbQuarter': hizbQuarter,
+        'text': text,
+        'audioUrl': audioUrl,
+        'tafsirText': tafsirText,
+        'surahName': surahName,
+        'lines': lines,
+        'lineSegments': lineSegments.map((s) => s.toJson()).toList(),
+      };
+
+  factory AyahEntity.fromJson(Map<String, dynamic> json) {
+    return AyahEntity(
+      number: (json['number'] as num?)?.toInt() ?? 1,
+      surahNumber: (json['surahNumber'] as num?)?.toInt() ?? 1,
+      numberInSurah: (json['numberInSurah'] as num?)?.toInt() ?? 1,
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      juz: (json['juz'] as num?)?.toInt() ?? 1,
+      hizbQuarter: (json['hizbQuarter'] as num?)?.toInt() ?? 1,
+      text: json['text'] as String? ?? '',
+      audioUrl: json['audioUrl'] as String?,
+      tafsirText: json['tafsirText'] as String?,
+      surahName: json['surahName'] as String? ?? '',
+      lines: (json['lines'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          const [],
+      lineSegments: (json['lineSegments'] as List<dynamic>?)
+              ?.map((e) => AyahLineSegment.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
 
   @override
   List<Object?> get props => [

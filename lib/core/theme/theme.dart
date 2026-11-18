@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 
 import 'text_theme.dart';
 import 'color_schemes.dart';
@@ -130,6 +131,9 @@ ThemeData _buildTheme(
       foregroundColor: colorScheme.onSurface,
       elevation: 0,
       centerTitle: true,
+      systemOverlayStyle: colorScheme.brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
       titleTextStyle: textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
         color: colorScheme.onSurface,

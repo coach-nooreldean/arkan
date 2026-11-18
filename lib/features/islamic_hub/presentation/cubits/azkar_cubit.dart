@@ -68,6 +68,35 @@ class AzkarCubit extends Cubit<AzkarState> {
     emit(state.copyWith(selectedCategory: cat, clearCelebration: true));
   }
 
+  /// Builds a virtual category containing all currently favorited Azkar items.
+  AzkarCategoryEntity buildFavoritesCategory(List<String> favoriteIds) {
+    final favSet = favoriteIds.toSet();
+    final matchedItems = <AzkarItemEntity>[];
+    final seen = <String>{};
+    for (final cat in state.categories) {
+      for (final item in cat.items) {
+        if (favSet.contains(item.id) && seen.add(item.id)) {
+          matchedItems.add(item);
+        }
+      }
+    }
+    return AzkarCategoryEntity(
+      id: 'favorites',
+      name: 'أذكاري المفضلة',
+      icon: 'heart-circle',
+      colorValue: 0xFFE11D48,
+      rewardCoins: 3,
+      items: matchedItems,
+    );
+  }
+
+  void selectFavoritesCategory(List<String> favoriteIds) {
+    emit(state.copyWith(
+      selectedCategory: buildFavoritesCategory(favoriteIds),
+      clearCelebration: true,
+    ));
+  }
+
   Future<void> incrementItemCount({
     required String itemId,
     String? userId,
@@ -96,18 +125,24 @@ class AzkarCubit extends Cubit<AzkarState> {
       return item;
     }).toList();
 
-    final updatedCat = AzkarCategoryEntity(
-      id: currentCat.id,
-      name: currentCat.name,
-      icon: currentCat.icon,
-      colorValue: currentCat.colorValue,
-      rewardCoins: currentCat.rewardCoins,
-      items: updatedItems,
-    );
+    final updatedCat = currentCat.copyWith(items: updatedItems);
 
     final updatedCategories = state.categories.map((c) {
       if (c.id == currentCat.id) {
         return updatedCat;
+      }
+      if (currentCat.id == 'favorites' &&
+          c.items.any((existing) => existing.id == itemId)) {
+        final syncedItems = c.items.map((existing) {
+          if (existing.id == itemId) {
+            return updatedItems.firstWhere(
+              (u) => u.id == itemId,
+              orElse: () => existing,
+            );
+          }
+          return existing;
+        }).toList();
+        return c.copyWith(items: syncedItems);
       }
       return c;
     }).toList();
@@ -125,7 +160,10 @@ class AzkarCubit extends Cubit<AzkarState> {
     ));
 
     // Claim reward if completed and user logged in
-    if (justCompletedAll && userId != null && userId.isNotEmpty) {
+    if (justCompletedAll &&
+        updatedCat.id != 'favorites' &&
+        userId != null &&
+        userId.isNotEmpty) {
       final rewardResult = await _repository.claimAzkarReward(userId, updatedCat.id);
       await rewardResult.fold(
         (_) async {},
@@ -143,6 +181,20 @@ class AzkarCubit extends Cubit<AzkarState> {
   }
 
   void resetCategoryProgress(String categoryId) {
+    if (categoryId == 'favorites') {
+      final currentSelected = state.selectedCategory;
+      if (currentSelected != null && currentSelected.id == 'favorites') {
+        final resetItems = currentSelected.items
+            .map((i) => i.copyWith(currentCount: 0, isCompleted: false))
+            .toList();
+        emit(state.copyWith(
+          selectedCategory: currentSelected.copyWith(items: resetItems),
+          clearCelebration: true,
+        ));
+      }
+      return;
+    }
+
     final updatedCategories = state.categories.map((cat) {
       if (cat.id == categoryId) {
         final resetItems = cat.items.map((i) => i.copyWith(currentCount: 0, isCompleted: false)).toList();

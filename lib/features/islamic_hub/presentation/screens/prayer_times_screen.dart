@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/premium_background.dart';
 import '../cubits/prayer_times_cubit.dart';
@@ -129,11 +130,12 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
           assetPath = 'audio/adhan_egypt.mp3';
           break;
         case 'takbeerat_only':
+        case 'takbeerat':
           assetPath = 'audio/adhan_takbeerat.mp3';
           break;
         case 'notification_only':
         default:
-          assetPath = 'audio/notification_sound.mp3';
+          assetPath = 'audio/ui_success.mp3';
           break;
       }
       await _audioPlayer.play(AssetSource(assetPath));
@@ -995,6 +997,194 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                               ),
                             ],
                           ),
+
+                          SizedBox(height: 14.h),
+                          const Divider(),
+                          SizedBox(height: 10.h),
+
+                          // Asr Juristic Method (Shafi vs Hanafi)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'مذهب حساب صلاة العصر',
+                                style: TextStyle(
+                                  fontSize: 13.5.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E2438) : const Color(0xFFF4F6F9),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: isDark ? Colors.white10 : Colors.black12,
+                                  ),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: settings.asrJuristicMethod,
+                                    isExpanded: true,
+                                    dropdownColor: isDark ? const Color(0xFF1E2438) : Colors.white,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 0,
+                                        child: Text('الجمهور (الشافعي، المالكي، الحنبلي)'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 1,
+                                        child: Text('المذهب الحنفي'),
+                                      ),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        context.read<IslamicSettingsCubit>().updateAsrJuristicMethod(val);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 14.h),
+
+                          // Pre-Azan & Iqamah Reminders
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'تنبيه قبل الأذان',
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    SizedBox(height: 6.h),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1E2438) : const Color(0xFFF4F6F9),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        border: Border.all(
+                                          color: isDark ? Colors.white10 : Colors.black12,
+                                        ),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<int>(
+                                          value: settings.preAzanReminderMinutes,
+                                          isExpanded: true,
+                                          dropdownColor: isDark ? const Color(0xFF1E2438) : Colors.white,
+                                          items: const [
+                                            DropdownMenuItem(value: 0, child: Text('إيقاف')),
+                                            DropdownMenuItem(value: 5, child: Text('قبل 5 د')),
+                                            DropdownMenuItem(value: 10, child: Text('قبل 10 د')),
+                                            DropdownMenuItem(value: 15, child: Text('قبل 15 د')),
+                                            DropdownMenuItem(value: 20, child: Text('قبل 20 د')),
+                                          ],
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              context.read<IslamicSettingsCubit>().updatePreAzanReminder(val);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'تنبيه الإقامة',
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    SizedBox(height: 6.h),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1E2438) : const Color(0xFFF4F6F9),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        border: Border.all(
+                                          color: isDark ? Colors.white10 : Colors.black12,
+                                        ),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<int>(
+                                          value: settings.iqamahReminderMinutes,
+                                          isExpanded: true,
+                                          dropdownColor: isDark ? const Color(0xFF1E2438) : Colors.white,
+                                          items: const [
+                                            DropdownMenuItem(value: 0, child: Text('إيقاف')),
+                                            DropdownMenuItem(value: 10, child: Text('بعد 10 د')),
+                                            DropdownMenuItem(value: 15, child: Text('بعد 15 د')),
+                                            DropdownMenuItem(value: 20, child: Text('بعد 20 د')),
+                                          ],
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              context.read<IslamicSettingsCubit>().updateIqamahReminder(val);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 14.h),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showPerPrayerCustomizationSheet(context),
+                              icon: Icon(IconsaxPlusLinear.setting_4, size: 18.sp),
+                              label: const Text('تخصيص صوت ودقائق كل صلاة (±)'),
+                            ),
+                          ),
+
+                          SizedBox(height: 10.h),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final sent = await NotificationService()
+                                    .showTestPrayerNotification(
+                                  azanSound: settings.azanSound,
+                                );
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      sent
+                                          ? 'islamic.prayer_times.test_adhan_sent'.tr()
+                                          : 'islamic.prayer_times.test_adhan_unsupported'.tr(),
+                                    ),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              icon: Icon(IconsaxPlusBold.notification_bing, size: 18.sp),
+                              label: Text('islamic.prayer_times.test_adhan_btn'.tr()),
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -1008,8 +1198,147 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
         ),
       ),
     ),
-  ),
-);
+    ),
+  );
 }
+
+  void _showPerPrayerCustomizationSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final prayers = [
+      (key: 'fajr', label: 'الفجر', hasSound: true),
+      (key: 'sunrise', label: 'الشروق', hasSound: false),
+      (key: 'dhuhr', label: 'الظهر', hasSound: true),
+      (key: 'asr', label: 'العصر', hasSound: true),
+      (key: 'maghrib', label: 'المغرب', hasSound: true),
+      (key: 'isha', label: 'العشاء', hasSound: true),
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1B2030) : Colors.white,
+      constraints: const BoxConstraints(maxWidth: 580),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: BlocBuilder<IslamicSettingsCubit, IslamicSettingsState>(
+            builder: (ctx, settingsState) {
+              final s = settingsState.settings;
+              final cubit = ctx.read<IslamicSettingsCubit>();
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'تخصيص صوت ودقائق كل صلاة',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'يمكنك تعديل الدقائق (±) لمطابقة مسجدك واختيار صوت أذان خاص لكل صلاة.',
+                      style: TextStyle(
+                        fontSize: 11.5.sp,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+                    ...prayers.map((item) {
+                      final offset = s.prayerMinuteOffsets[item.key] ?? 0;
+                      final sound = s.perPrayerAzanSound[item.key] ?? 'default';
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 10.h),
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF141826) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14.r),
+                          border: Border.all(
+                            color: isDark ? Colors.white10 : Colors.black12,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                item.label,
+                                style: TextStyle(
+                                  fontSize: 13.5.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                              onPressed: offset > -15
+                                  ? () => cubit.updatePrayerMinuteOffset(item.key, offset - 1)
+                                  : null,
+                            ),
+                            SizedBox(
+                              width: 44.w,
+                              child: Text(
+                                offset > 0 ? '+$offset د' : '$offset د',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: offset == 0
+                                      ? (isDark ? Colors.white70 : Colors.black54)
+                                      : const Color(0xFF3551AE),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                              onPressed: offset < 15
+                                  ? () => cubit.updatePrayerMinuteOffset(item.key, offset + 1)
+                                  : null,
+                            ),
+                            if (item.hasSound)
+                              Expanded(
+                                flex: 3,
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: sound,
+                                    isExpanded: true,
+                                    dropdownColor: isDark ? const Color(0xFF1E2438) : Colors.white,
+                                    style: TextStyle(
+                                      fontSize: 11.5.sp,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 'default', child: Text('الافتراضي')),
+                                      DropdownMenuItem(value: 'makkah', child: Text('مكة')),
+                                      DropdownMenuItem(value: 'madinah', child: Text('المدينة')),
+                                      DropdownMenuItem(value: 'egypt', child: Text('مصر')),
+                                      DropdownMenuItem(value: 'takbeerat_only', child: Text('تكبيرات')),
+                                      DropdownMenuItem(value: 'notification_only', child: Text('تنبيه')),
+                                      DropdownMenuItem(value: 'silent', child: Text('صامت')),
+                                    ],
+                                    onChanged: (val) => cubit.updatePerPrayerAzanSound(item.key, val),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 }
 

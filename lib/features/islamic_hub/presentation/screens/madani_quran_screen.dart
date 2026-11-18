@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/ayah_entity.dart';
 import '../cubits/quran_cubit.dart';
 import '../cubits/khatmah_cubit.dart';
+import '../cubits/worship_tracker_cubit.dart';
 import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
 import '../../../rewards/domain/entities/arkan_coin_transaction.dart';
 import '../widgets/madani_page_renderer.dart';
@@ -230,6 +231,8 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
   late PageController _spreadController;
   bool _showControls = true;
   bool _enableDualPage = true;
+  bool? _lastResolvedIsDual;
+  int? _selectedLongPressAyahNumber;
 
   @override
   void initState() {
@@ -240,6 +243,28 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndPromptWird();
     });
+  }
+
+  void _syncControllersForMode(bool isDual, int currentPage) {
+    if (_lastResolvedIsDual == isDual) return;
+    _lastResolvedIsDual = isDual;
+    if (isDual) {
+      final targetSpread = ((currentPage - 1) ~/ 2).clamp(0, 301);
+      if (_spreadController.hasClients) {
+        _spreadController.jumpToPage(targetSpread);
+      } else {
+        _spreadController.dispose();
+        _spreadController = PageController(initialPage: targetSpread);
+      }
+    } else {
+      final targetPageIdx = (currentPage - 1).clamp(0, 603);
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(targetPageIdx);
+      } else {
+        _pageController.dispose();
+        _pageController = PageController(initialPage: targetPageIdx);
+      }
+    }
   }
 
   void _checkAndPromptWird() {
@@ -691,6 +716,151 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
     );
   }
 
+  void _showAyahQuickActionsSheet(BuildContext context, AyahEntity ayah) {
+    HapticFeedback.mediumImpact();
+    final cubit = context.read<QuranCubit>();
+    final state = cubit.state;
+    final isDark = state.readingMode == QuranReadingMode.dark;
+    final isSepia = state.readingMode == QuranReadingMode.sepia;
+
+    setState(() {
+      _selectedLongPressAyahNumber = ayah.number;
+    });
+
+    final sheetBg = isDark
+        ? const Color(0xFF1B2030)
+        : (isSepia ? const Color(0xFFF3E5CA) : Colors.white);
+    final titleColor = isDark
+        ? Colors.white
+        : (isSepia ? const Color(0xFF4E342E) : const Color(0xFF1E2438));
+    final surahTitle = ayah.surahName.isNotEmpty
+        ? ayah.surahName
+        : (state.surahs.where((s) => s.number == ayah.surahNumber).firstOrNull?.name ??
+            state.currentSurah?.name ??
+            '');
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: sheetBg,
+      constraints: const BoxConstraints(maxWidth: 560),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      surahTitle.isNotEmpty
+                          ? '$surahTitle — الآية ${ayah.numberInSurah}'
+                          : 'الآية ${ayah.numberInSurah}',
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                        color: titleColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.of(sheetCtx).pop(),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Container(
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14.r),
+                  ),
+                  child: Text(
+                    ayah.text,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'AmiriQuran',
+                      fontSize: 15.sp,
+                      height: 1.6,
+                      color: titleColor,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 14.h),
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
+                  alignment: WrapAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetCtx).pop();
+                        cubit.playAyah(ayah);
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                      label: const Text('استماع'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3551AE),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetCtx).pop();
+                        MadaniQuranScreen.showTafsirModal(
+                          context,
+                          ayahNumber: ayah.number,
+                          numberInSurah: ayah.numberInSurah,
+                          ayahText: ayah.text,
+                          surahName: surahTitle,
+                        );
+                      },
+                      icon: const Icon(Icons.menu_book_outlined, size: 18),
+                      label: const Text('التفسير'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetCtx).pop();
+                        QuranNotesScreen.showAddNoteDialog(context, ayah);
+                      },
+                      icon: const Icon(Icons.edit_note_rounded, size: 18),
+                      label: const Text('تدوين تدبر'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetCtx).pop();
+                        AyahShareCardDialog.show(context, ayah);
+                      },
+                      icon: const Icon(Icons.share_outlined, size: 18),
+                      label: const Text('مشاركة'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      if (mounted) {
+        setState(() {
+          _selectedLongPressAyahNumber = null;
+        });
+      }
+    });
+  }
+
   Widget _buildPageRenderer(BuildContext context, int pageNum, QuranState state) {
     final currentSurah = state.currentSurah?.name ?? '';
     final currentJuz = state.currentJuz?.name ?? '';
@@ -722,6 +892,9 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
       }
     }
 
+    final pageAyahs = state.pageAyahsMap[pageNum] ??
+        (pageNum == state.currentPage ? state.currentPageAyahs : const <AyahEntity>[]);
+
     return MadaniPageRenderer(
       pageNumber: pageNum,
       surahName: currentSurah,
@@ -729,6 +902,10 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
       readingMode: state.readingMode,
       primaryImageUrl: context.read<QuranCubit>().getPageImageUrl(pageNum),
       alternativeUrls: context.read<QuranCubit>().getPageImageAlternativeUrls(pageNum),
+      localImagePath: state.localPageImagePaths[pageNum],
+      pageAyahs: pageAyahs,
+      selectedHighlightAyahNumber: _selectedLongPressAyahNumber,
+      onAyahLongPress: (ayah) => _showAyahQuickActionsSheet(context, ayah),
       highlightLines: highlightLines,
       highlightSegments: highlightSegments,
       isCurrentlyPlaying: isPagePlaying,
@@ -750,6 +927,9 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
             subtitle: kState.successMessage!,
             source: ArkanCoinSource.quranWird,
           );
+          try {
+            context.read<WorshipTrackerCubit>().markQuranActivity(wirdCompleted: true);
+          } catch (_) {}
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFF3551AE),
@@ -814,6 +994,7 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
           }
         },
         builder: (context, state) {
+          _syncControllersForMode(isDual, state.currentPage);
           final isDark = state.readingMode == QuranReadingMode.dark;
           final isSepia = state.readingMode == QuranReadingMode.sepia;
 
@@ -882,25 +1063,29 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                   // Full Screen PageView (Single Page or Dual Page Spread)
                   GestureDetector(
                     onTap: _toggleControls,
-                    child: isDual
-                        ? PageView.builder(
-                            controller: _spreadController,
-                            reverse: true, // Madani Quran reads Right-to-Left
-                            itemCount: 302,
-                            onPageChanged: (spreadIdx) {
-                              final rightPage = (spreadIdx * 2) + 1;
-                              context.read<QuranCubit>().setPage(rightPage);
-                              try {
-                                context.read<KhatmahCubit>().updateCurrentPage(rightPage);
-                              } catch (_) {}
-                            },
-                            itemBuilder: (context, spreadIdx) {
-                              final rightPageNum = (spreadIdx * 2) + 1;
-                              final leftPageNum = (spreadIdx * 2) + 2;
+                    child: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: isDual
+                          ? PageView.builder(
+                              key: const ValueKey('quran_dual_pageview'),
+                              controller: _spreadController,
+                              reverse: false, // In TextDirection.rtl, reverse: false reads Right-to-Left
+                              itemCount: 302,
+                              onPageChanged: (spreadIdx) {
+                                final rightPage = (spreadIdx * 2) + 1;
+                                context.read<QuranCubit>().setPage(rightPage);
+                                try {
+                                  context.read<KhatmahCubit>().updateCurrentPage(rightPage);
+                                } catch (_) {}
+                                try {
+                                  context.read<WorshipTrackerCubit>().markQuranActivity(pageNumber: rightPage);
+                                } catch (_) {}
+                              },
+                              itemBuilder: (context, spreadIdx) {
+                                final rightPageNum = (spreadIdx * 2) + 1;
+                                final leftPageNum = (spreadIdx * 2) + 2;
 
-                              return Directionality(
-                                textDirection: TextDirection.rtl,
-                                child: Row(
+                                return Row(
                                   children: [
                                     // Right Page (Odd page: 1, 3, 5, ...)
                                     Expanded(
@@ -921,26 +1106,30 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                           : Container(color: bgColor),
                                     ),
                                   ],
-                                ),
-                              );
-                            },
-                          )
-                        : PageView.builder(
-                            controller: _pageController,
-                            reverse: true, // Madani Quran reads Right-to-Left
-                            itemCount: 604,
-                            onPageChanged: (idx) {
-                              final page = idx + 1;
-                              context.read<QuranCubit>().setPage(page);
-                              try {
-                                context.read<KhatmahCubit>().updateCurrentPage(page);
-                              } catch (_) {}
-                            },
-                            itemBuilder: (context, index) {
-                              final pageNum = index + 1;
-                              return _buildPageRenderer(context, pageNum, state);
-                            },
-                          ),
+                                );
+                              },
+                            )
+                          : PageView.builder(
+                              key: const ValueKey('quran_single_pageview'),
+                              controller: _pageController,
+                              reverse: false, // In TextDirection.rtl, reverse: false reads Right-to-Left
+                              itemCount: 604,
+                              onPageChanged: (idx) {
+                                final page = idx + 1;
+                                context.read<QuranCubit>().setPage(page);
+                                try {
+                                  context.read<KhatmahCubit>().updateCurrentPage(page);
+                                } catch (_) {}
+                                try {
+                                  context.read<WorshipTrackerCubit>().markQuranActivity(pageNumber: page);
+                                } catch (_) {}
+                              },
+                              itemBuilder: (context, index) {
+                                final pageNum = index + 1;
+                                return _buildPageRenderer(context, pageNum, state);
+                              },
+                            ),
+                    ),
                   ),
 
                   // Side Navigation Buttons for Tablets & Large Screens
@@ -970,7 +1159,7 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                 ],
                                 border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
                               ),
-                              child: Icon(Icons.arrow_forward_ios_rounded, color: iconColor, size: 20.sp),
+                              child: Icon(Icons.chevron_right_rounded, color: iconColor, size: 26.sp),
                             ),
                           ),
                         ),
@@ -1001,7 +1190,7 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                 ],
                                 border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
                               ),
-                              child: Icon(Icons.arrow_back_ios_new_rounded, color: iconColor, size: 20.sp),
+                              child: Icon(Icons.chevron_left_rounded, color: iconColor, size: 26.sp),
                             ),
                           ),
                         ),
@@ -1062,8 +1251,8 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                       ),
                     ),
 
-                  // Real-time Offline Download Progress Overlay
-                  if (state.isDownloadingSurah)
+                  // Real-time Offline Download Progress Overlay (Audio or Full Mushaf/Text Pack)
+                  if (state.isDownloadingSurah || state.isDownloadingOfflinePack)
                     Positioned(
                       top: MediaQuery.of(context).padding.top + (_showControls ? 64.h : 16.h),
                       left: 16.w,
@@ -1117,7 +1306,9 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'جاري تحميل سورة ${state.downloadingSurahName ?? state.currentSurah?.name ?? ""} أوفلاين',
+                                              state.isDownloadingOfflinePack
+                                                  ? (state.offlineDownloadLabel ?? 'جاري التحميل أوفلاين...')
+                                                  : 'جاري تحميل سورة ${state.downloadingSurahName ?? state.currentSurah?.name ?? ""} أوفلاين',
                                               style: TextStyle(
                                                 fontFamily: 'Cairo',
                                                 fontWeight: FontWeight.bold,
@@ -1125,7 +1316,7 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                                 color: textColor,
                                               ),
                                             ),
-                                            if (state.downloadingAyahInfo != null)
+                                            if (!state.isDownloadingOfflinePack && state.downloadingAyahInfo != null)
                                               Text(
                                                 state.downloadingAyahInfo!,
                                                 style: TextStyle(
@@ -1138,7 +1329,7 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                         ),
                                       ),
                                       Text(
-                                        '${((state.downloadProgress ?? 0.0) * 100).toInt()}%',
+                                        '${(((state.isDownloadingOfflinePack ? state.offlinePackProgress : state.downloadProgress) ?? 0.0) * 100).toInt()}%',
                                         style: TextStyle(
                                           fontFamily: 'Cairo',
                                           fontWeight: FontWeight.bold,
@@ -1146,13 +1337,21 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                           color: const Color(0xFF3551AE),
                                         ),
                                       ),
+                                      if (state.isDownloadingOfflinePack)
+                                        IconButton(
+                                          icon: const Icon(Icons.close_rounded, size: 18),
+                                          tooltip: 'إيقاف التحميل',
+                                          onPressed: () => context.read<QuranCubit>().cancelOfflineDownload(),
+                                        ),
                                     ],
                                   ),
                                   SizedBox(height: 8.h),
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(6.r),
                                     child: LinearProgressIndicator(
-                                      value: state.downloadProgress,
+                                      value: state.isDownloadingOfflinePack
+                                          ? state.offlinePackProgress
+                                          : state.downloadProgress,
                                       backgroundColor: isDark ? Colors.white12 : const Color(0xFFE8EEF8),
                                       valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF3551AE)),
                                       minHeight: 6.h,
@@ -1232,9 +1431,14 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                             ),
                                           ),
                                           Text(
-                                            isDual
-                                                ? '$currentJuz — صفحة ${state.currentPage} & ${state.currentPage + 1 <= 604 ? state.currentPage + 1 : ""}'
-                                                : '$currentJuz — صفحة ${state.currentPage}',
+                                            () {
+                                              if (!isDual) {
+                                                return '$currentJuz — صفحة ${state.currentPage}';
+                                              }
+                                              final spreadRightPage = ((state.currentPage - 1) ~/ 2) * 2 + 1;
+                                              final spreadLeftPage = spreadRightPage + 1;
+                                              return '$currentJuz — صفحة $spreadRightPage${spreadLeftPage <= 604 ? " - $spreadLeftPage" : ""}';
+                                            }(),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
@@ -1260,12 +1464,6 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                             onPressed: () {
                                               setState(() {
                                                 _enableDualPage = !_enableDualPage;
-                                                if (_enableDualPage) {
-                                                  final spread = (state.currentPage - 1) ~/ 2;
-                                                  _spreadController = PageController(initialPage: spread.clamp(0, 301));
-                                                } else {
-                                                  _pageController = PageController(initialPage: (state.currentPage - 1).clamp(0, 603));
-                                                }
                                               });
                                             },
                                           ),
@@ -1354,6 +1552,10 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                             } else if (val == 'download') {
                                               final surahNum = state.currentSurah?.number ?? 1;
                                               context.read<QuranCubit>().downloadSurahAudio(surahNum);
+                                            } else if (val == 'download_text') {
+                                              context.read<QuranCubit>().downloadOfflineTextAndTafsir();
+                                            } else if (val == 'download_pages') {
+                                              context.read<QuranCubit>().downloadOfflineMushafPages();
                                             }
                                           },
                                           itemBuilder: (ctx) {
@@ -1451,6 +1653,54 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
                                                   ],
                                                 ),
                                               ),
+                                              PopupMenuItem(
+                                                value: 'download_text',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      state.isOfflineBundleReady ? Icons.check_circle_rounded : Icons.library_books_rounded,
+                                                      size: 18,
+                                                      color: state.isOfflineBundleReady ? const Color(0xFF059669) : const Color(0xFF3551AE),
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Text(
+                                                      state.isOfflineBundleReady
+                                                          ? 'النصوص والتفسير جاهزة أوفلاين ✓'
+                                                          : 'تحميل القرآن والتفسير أوفلاين',
+                                                      style: TextStyle(
+                                                        fontFamily: 'Cairo',
+                                                        fontSize: 13.sp,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: itemTextColor,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuItem(
+                                                value: 'download_pages',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      state.downloadedMushafPagesCount >= 604 ? Icons.offline_pin_rounded : Icons.collections_bookmark_rounded,
+                                                      size: 18,
+                                                      color: state.downloadedMushafPagesCount >= 604 ? const Color(0xFF059669) : const Color(0xFF3551AE),
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Text(
+                                                      state.downloadedMushafPagesCount >= 604
+                                                          ? 'صفحات المصحف جاهزة (604/604) ✓'
+                                                          : 'تحميل صفحات المصحف (${state.downloadedMushafPagesCount}/604)',
+                                                      style: TextStyle(
+                                                        fontFamily: 'Cairo',
+                                                        fontSize: 13.sp,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: itemTextColor,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ];
                                           },
                                         ),
@@ -1508,12 +1758,11 @@ class _MadaniQuranScreenState extends State<MadaniQuranScreen> {
         final active = kState.activeKhatmah;
         if (active != null) {
           final isDoneToday = active.remainingPagesToday == 0;
-          final isDual = _enableDualPage &&
-              (MediaQuery.of(context).size.width >= 720 ||
-                  MediaQuery.of(context).orientation == Orientation.landscape);
+          final isDual = _enableDualPage && MediaQuery.sizeOf(context).width >= 720;
+          final spreadRightPage = ((qState.currentPage - 1) ~/ 2) * 2 + 1;
           final isOnWirdPage = isDual
-              ? (active.currentPage >= qState.currentPage &&
-                  active.currentPage <= qState.currentPage + 1)
+              ? (active.currentPage >= spreadRightPage &&
+                  active.currentPage <= spreadRightPage + 1)
               : (qState.currentPage == active.currentPage);
 
           return Container(

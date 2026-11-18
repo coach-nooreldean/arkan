@@ -44,6 +44,16 @@ abstract class IslamicHubRepository {
   Future<Either<String, List<AyahEntity>>> getAyahsForSurah(int surahNumber);
   Future<Either<String, String>> getAyahTafsir(int ayahNumber);
   Future<List<AyahEntity>> searchQuran(String query);
+  Future<bool> isFullQuranBundleCached();
+  Future<int> getDownloadedMushafPagesCount();
+  Future<String?> getLocalMushafPagePath(int pageNumber);
+  Future<Either<String, void>> downloadFullQuranOfflineBundle({
+    void Function(double progress, String status)? onProgress,
+  });
+  Future<Either<String, void>> downloadAllMushafPages({
+    required void Function(int completed, int total) onProgress,
+    bool Function()? isCancelled,
+  });
 
   // Quran Khatmah
   Future<List<QuranKhatmahEntity>> getKhatmahs();

@@ -48,6 +48,15 @@ class QuranState extends Equatable {
   final String? downloadingAyahInfo;
   final String? downloadCompletedMessage;
 
+  // Offline Mushaf Pages & Text/Tafsir Bundle + Interactive Page Map
+  final Map<int, List<AyahEntity>> pageAyahsMap;
+  final Map<int, String> localPageImagePaths;
+  final bool isOfflineBundleReady;
+  final int downloadedMushafPagesCount;
+  final bool isDownloadingOfflinePack;
+  final double? offlinePackProgress;
+  final String? offlineDownloadLabel;
+
   const QuranState({
     this.currentPage = 1,
     this.surahs = const [],
@@ -77,6 +86,13 @@ class QuranState extends Equatable {
     this.downloadingSurahName,
     this.downloadingAyahInfo,
     this.downloadCompletedMessage,
+    this.pageAyahsMap = const {},
+    this.localPageImagePaths = const {},
+    this.isOfflineBundleReady = false,
+    this.downloadedMushafPagesCount = 0,
+    this.isDownloadingOfflinePack = false,
+    this.offlinePackProgress,
+    this.offlineDownloadLabel,
   });
 
   SurahEntity? get currentSurah {
@@ -147,11 +163,19 @@ class QuranState extends Equatable {
     String? downloadingSurahName,
     String? downloadingAyahInfo,
     String? downloadCompletedMessage,
+    Map<int, List<AyahEntity>>? pageAyahsMap,
+    Map<int, String>? localPageImagePaths,
+    bool? isOfflineBundleReady,
+    int? downloadedMushafPagesCount,
+    bool? isDownloadingOfflinePack,
+    double? offlinePackProgress,
+    String? offlineDownloadLabel,
     bool clearTafsir = false,
     bool clearRange = false,
     bool clearPlayingAyah = false,
     bool clearDownloading = false,
     bool clearCompletedMessage = false,
+    bool clearOfflinePack = false,
   }) {
     return QuranState(
       currentPage: currentPage ?? this.currentPage,
@@ -182,6 +206,19 @@ class QuranState extends Equatable {
       downloadingSurahName: clearDownloading ? null : (downloadingSurahName ?? this.downloadingSurahName),
       downloadingAyahInfo: clearDownloading ? null : (downloadingAyahInfo ?? this.downloadingAyahInfo),
       downloadCompletedMessage: clearCompletedMessage ? null : (downloadCompletedMessage ?? this.downloadCompletedMessage),
+      pageAyahsMap: pageAyahsMap ?? this.pageAyahsMap,
+      localPageImagePaths: localPageImagePaths ?? this.localPageImagePaths,
+      isOfflineBundleReady: isOfflineBundleReady ?? this.isOfflineBundleReady,
+      downloadedMushafPagesCount:
+          downloadedMushafPagesCount ?? this.downloadedMushafPagesCount,
+      isDownloadingOfflinePack:
+          isDownloadingOfflinePack ?? this.isDownloadingOfflinePack,
+      offlinePackProgress: clearOfflinePack
+          ? null
+          : (offlinePackProgress ?? this.offlinePackProgress),
+      offlineDownloadLabel: clearOfflinePack
+          ? null
+          : (offlineDownloadLabel ?? this.offlineDownloadLabel),
     );
   }
 
@@ -215,6 +252,13 @@ class QuranState extends Equatable {
         downloadingSurahName,
         downloadingAyahInfo,
         downloadCompletedMessage,
+        pageAyahsMap,
+        localPageImagePaths,
+        isOfflineBundleReady,
+        downloadedMushafPagesCount,
+        isDownloadingOfflinePack,
+        offlinePackProgress,
+        offlineDownloadLabel,
       ];
 }
 
@@ -255,6 +299,20 @@ class QuranCubit extends Cubit<QuranState> {
 
     _listenToAudioPlayer();
     loadAyahsForCurrentPage();
+    refreshOfflineStatus();
+  }
+
+  bool _cancelOfflineDownload = false;
+
+  Future<void> refreshOfflineStatus() async {
+    final bundleReady = await _repository.isFullQuranBundleCached();
+    final pagesCount = await _repository.getDownloadedMushafPagesCount();
+    if (!isClosed) {
+      emit(state.copyWith(
+        isOfflineBundleReady: bundleReady,
+        downloadedMushafPagesCount: pagesCount,
+      ));
+    }
   }
 
   bool _isChangingTrack = false;
@@ -419,11 +477,158 @@ class QuranCubit extends Cubit<QuranState> {
   }
 
   Future<void> loadAyahsForCurrentPage() async {
+    final page = state.currentPage;
+    final partnerPage = page.isOdd ? page + 1 : page - 1;
     emit(state.copyWith(isLoadingAyahs: true));
-    final result = await _repository.getAyahsForPage(state.currentPage);
+
+    final result = await _repository.getAyahsForPage(page);
+    if (isClosed) return;
+
+    final updatedMap = Map<int, List<AyahEntity>>.from(state.pageAyahsMap);
+    final updatedPaths = Map<int, String>.from(state.localPageImagePaths);
+
+    final localPath = await _repository.getLocalMushafPagePath(page);
+    if (localPath != null) {
+      updatedPaths[page] = localPath;
+    }
+
+    List<AyahEntity> loadedAyahs = state.currentPageAyahs;
     result.fold(
-      (_) => emit(state.copyWith(isLoadingAyahs: false)),
-      (ayahs) => emit(state.copyWith(currentPageAyahs: ayahs, isLoadingAyahs: false)),
+      (_) {},
+      (ayahs) {
+        loadedAyahs = ayahs;
+        updatedMap[page] = ayahs;
+      },
+    );
+
+    if (partnerPage >= 1 && partnerPage <= 604) {
+      final partnerPath = await _repository.getLocalMushafPagePath(partnerPage);
+      if (partnerPath != null) {
+        updatedPaths[partnerPage] = partnerPath;
+      }
+      if (!updatedMap.containsKey(partnerPage)) {
+        final partnerRes = await _repository.getAyahsForPage(partnerPage);
+        partnerRes.fold((_) {}, (ayahs) => updatedMap[partnerPage] = ayahs);
+      }
+    }
+
+    if (!isClosed) {
+      emit(state.copyWith(
+        currentPageAyahs: loadedAyahs,
+        pageAyahsMap: updatedMap,
+        localPageImagePaths: updatedPaths,
+        isLoadingAyahs: false,
+      ));
+    }
+  }
+
+  void cancelOfflineDownload() {
+    _cancelOfflineDownload = true;
+  }
+
+  Future<void> downloadOfflineTextAndTafsir() async {
+    if (state.isDownloadingOfflinePack) return;
+    if (kIsWeb) {
+      emit(state.copyWith(
+        downloadCompletedMessage: 'البحث والتفسير يعملان مباشرة عبر الإنترنت في نسخة الويب ✨',
+      ));
+      return;
+    }
+
+    emit(state.copyWith(
+      isDownloadingOfflinePack: true,
+      offlinePackProgress: 0.05,
+      offlineDownloadLabel: 'جاري تحميل نص القرآن والتفسير الميسر...',
+      clearCompletedMessage: true,
+    ));
+
+    final res = await _repository.downloadFullQuranOfflineBundle(
+      onProgress: (progress, status) {
+        if (!isClosed) {
+          emit(state.copyWith(
+            isDownloadingOfflinePack: true,
+            offlinePackProgress: progress,
+            offlineDownloadLabel: status,
+          ));
+        }
+      },
+    );
+
+    if (isClosed) return;
+    res.fold(
+      (err) {
+        emit(state.copyWith(
+          isDownloadingOfflinePack: false,
+          clearOfflinePack: true,
+          downloadCompletedMessage: err,
+        ));
+      },
+      (_) {
+        emit(state.copyWith(
+          isDownloadingOfflinePack: false,
+          isOfflineBundleReady: true,
+          clearOfflinePack: true,
+          downloadCompletedMessage: 'تم حفظ نص القرآن والتفسير الميسر بالكامل للقراءة والبحث أوفلاين 🎉',
+        ));
+      },
+    );
+  }
+
+  Future<void> downloadOfflineMushafPages() async {
+    if (state.isDownloadingOfflinePack) return;
+    if (kIsWeb) {
+      emit(state.copyWith(
+        downloadCompletedMessage: 'صفحات المصحف تُعرض مباشرة عبر الإنترنت في نسخة الويب ✨',
+      ));
+      return;
+    }
+
+    _cancelOfflineDownload = false;
+    emit(state.copyWith(
+      isDownloadingOfflinePack: true,
+      offlinePackProgress: 0.0,
+      offlineDownloadLabel: 'جاري تحميل صفحات المصحف (0 / 604)...',
+      clearCompletedMessage: true,
+    ));
+
+    final res = await _repository.downloadAllMushafPages(
+      isCancelled: () => _cancelOfflineDownload,
+      onProgress: (completed, total) {
+        if (!isClosed) {
+          emit(state.copyWith(
+            isDownloadingOfflinePack: true,
+            offlinePackProgress: (completed / total).clamp(0.0, 1.0),
+            offlineDownloadLabel: 'تحميل صفحات المصحف ($completed / $total)',
+            downloadedMushafPagesCount: completed,
+          ));
+        }
+      },
+    );
+
+    if (isClosed) return;
+    final count = await _repository.getDownloadedMushafPagesCount();
+    await loadAyahsForCurrentPage();
+    if (isClosed) return;
+
+    res.fold(
+      (err) {
+        emit(state.copyWith(
+          isDownloadingOfflinePack: false,
+          downloadedMushafPagesCount: count,
+          clearOfflinePack: true,
+          downloadCompletedMessage: err,
+        ));
+      },
+      (_) {
+        emit(state.copyWith(
+          isDownloadingOfflinePack: false,
+          downloadedMushafPagesCount: count,
+          clearOfflinePack: true,
+          downloadCompletedMessage: _cancelOfflineDownload
+              ? 'تم إيقاف التحميل مؤقتاً (تم حفظ $count صفحة)'
+              : 'تم حفظ $count صفحة من المصحف الشريف أوفلاين بنجاح 📖',
+        ));
+      },
     );
   }
 

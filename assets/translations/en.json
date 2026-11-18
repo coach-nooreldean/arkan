@@ -29,7 +29,10 @@
       "not_yet_named": "It is not time for {} prayer yet",
       "auto_location": "Auto-detect Location (GPS)",
       "auto_location_success": "Location detected successfully: {}",
-      "auto_badge": "Auto GPS"
+      "auto_badge": "Auto GPS",
+      "test_adhan_btn": "Test Adhan Notification",
+      "test_adhan_sent": "Test Adhan notification sent successfully 🕌",
+      "test_adhan_unsupported": "Scheduled Adhan notifications are not supported on this platform"
     },
     "next_prayer": "Next Prayer",
     "time_remaining": "Remaining",
@@ -73,6 +76,7 @@
     "qibla_title": "Qibla Direction",
     "qibla_subtitle": "Accurate compass pointing to the Kaaba",
     "qibla_accuracy_tip": "Wave phone in figure-8 pattern to calibrate compass",
+    "qibla_no_sensor": "No compass sensor available on this device — Qibla direction is {}° clockwise from North",
     "azan_settings": "Azan & Reminder Settings",
     "azan_sound": "Azan Sound",
     "makkah": "Makkah Azan",
@@ -276,5 +280,28 @@
     "azkar": "Azkar",
     "worship": "Worship",
     "more": "More"
+  },
+  "theme": {
+    "title": "App Theme",
+    "subtitle": "Light, Dark, or Match Device",
+    "system": "System Default",
+    "system_desc": "Automatically matches your device Light/Dark theme",
+    "light": "Light Mode",
+    "light_desc": "Bright and crisp daylight appearance",
+    "dark": "Dark Mode",
+    "dark_desc": "Deep obsidian theme for comfortable night reading",
+    "prompt_title": "Choose Your Preferred Theme",
+    "prompt_desc": "The app follows your device theme automatically. Choose Light, Dark, or keep System Default — you can change this anytime in Settings.",
+    "confirm_btn": "Save & Continue",
+    "device_current_light": "Your device is currently in Light mode",
+    "device_current_dark": "Your device is currently in Dark mode"
+  },
+  "settings": {
+    "language_title": "App Language",
+    "language_subtitle": "Switch between Arabic and English",
+    "choose_language": "Choose App Language",
+    "smart_reminders": "Smart Azkar & Wird Reminders",
+    "hijri_calendar": "Hijri Calendar & Sunnah Fasting",
+    "backup_restore": "Backup & Restore Data"
   }
 }

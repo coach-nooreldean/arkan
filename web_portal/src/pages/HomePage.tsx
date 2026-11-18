@@ -18,7 +18,7 @@ export const HomePage: React.FC = () => {
     platform: 'android',
     label: 'أندرويد',
     badge: 'APK مباشر',
-    recommendedFile: 'Arkan-1.0.0-universal.apk',
+    recommendedFile: 'Arkan-1.1.0-universal.apk',
     downloadUrl: '#releases',
     isMobile: true,
     isAndroid: true,
@@ -59,7 +59,7 @@ export const HomePage: React.FC = () => {
             <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full glass-panel border border-gold-500/30 bg-gold-500/5 shadow-neon-gold">
               <span className="flex h-2 w-2 rounded-full bg-gold-400 animate-pulse"></span>
               <span className="text-xs sm:text-sm font-bold text-gold-300">
-                الإصدار الرسمي v1.0.0 متاح الآن للتحميل المباشر
+                الإصدار الرسمي v1.1.0 متاح الآن للتحميل المباشر
               </span>
             </div>
 
@@ -105,7 +105,7 @@ export const HomePage: React.FC = () => {
               {deviceInfo.isAndroid ? (
                 <>
                   <a
-                    href="https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/Arkan-1.0.0-universal.apk"
+                    href="https://github.com/coach-nooreldean/arkan/releases/download/v1.1.0/Arkan-1.1.0-universal.apk"
                     onClick={handleHeroDownload}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-base font-extrabold bg-gradient-to-r from-gold-500 via-amber-500 to-gold-600 text-slate-950 hover:from-gold-400 hover:to-amber-400 shadow-neon-gold hover:scale-[1.02] active:scale-95 transition-all duration-200"
                   >
@@ -150,7 +150,7 @@ export const HomePage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-1 text-xs">
               <span className="text-slate-400 font-medium ml-1">تحميل مباشر للـ APK:</span>
               <a
-                href="https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/Arkan-1.0.0-universal.apk"
+                href="https://github.com/coach-nooreldean/arkan/releases/download/v1.1.0/Arkan-1.1.0-universal.apk"
                 onClick={handleHeroDownload}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-gold-500/20 text-slate-200 hover:text-gold-300 border border-white/10 transition-colors"
               >
@@ -158,7 +158,7 @@ export const HomePage: React.FC = () => {
                 <span>النسخة الشاملة (67.4MB)</span>
               </a>
               <a
-                href="https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/Arkan-1.0.0-arm64-v8a.apk"
+                href="https://github.com/coach-nooreldean/arkan/releases/download/v1.1.0/Arkan-1.1.0-arm64-v8a.apk"
                 onClick={handleHeroDownload}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-blue-500/20 text-slate-200 hover:text-blue-300 border border-white/10 transition-colors"
               >
@@ -166,7 +166,7 @@ export const HomePage: React.FC = () => {
                 <span>الهواتف الحديثة 64-bit (26.9MB)</span>
               </a>
               <a
-                href="https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/Arkan-1.0.0-armeabi-v7a.apk"
+                href="https://github.com/coach-nooreldean/arkan/releases/download/v1.1.0/Arkan-1.1.0-armeabi-v7a.apk"
                 onClick={handleHeroDownload}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 text-slate-200 hover:text-emerald-300 border border-white/10 transition-colors"
               >

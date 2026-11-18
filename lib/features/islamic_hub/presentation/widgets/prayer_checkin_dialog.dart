@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/services/sound_effects_service.dart';
 import '../cubits/prayer_times_cubit.dart';
+import '../cubits/worship_tracker_cubit.dart';
 import '../../domain/entities/prayer_time_entity.dart';
 import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
 import '../../../rewards/domain/entities/arkan_coin_transaction.dart';
@@ -42,6 +43,14 @@ class PrayerCheckinDialog extends StatefulWidget {
           prayer: prayer,
           isOnTime: isOnTime,
         );
+        try {
+          if (context.mounted) {
+            await context.read<WorshipTrackerCubit>().markFardPrayerLogged(
+                  prayer.nameEnglish,
+                  date: prayer.time,
+                );
+          }
+        } catch (_) {}
         if (context.mounted) {
           SoundEffectsService.instance.playSuccess();
           ScaffoldMessenger.of(context).showSnackBar(

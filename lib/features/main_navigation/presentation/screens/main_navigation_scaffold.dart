@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
@@ -9,6 +10,10 @@ import '../../../islamic_hub/presentation/screens/surah_index_screen.dart';
 import '../../../islamic_hub/presentation/screens/azkar_category_screen.dart';
 import '../../../islamic_hub/presentation/screens/worship_tracker_screen.dart';
 import '../../../islamic_hub/presentation/screens/more_screen.dart';
+import '../../../islamic_hub/presentation/widgets/theme_preference_prompt_dialog.dart';
+import '../../../rewards/presentation/cubits/arkan_coins_cubit.dart';
+import '../../../rewards/presentation/cubits/arkan_coins_state.dart';
+import '../../../rewards/presentation/widgets/arkan_coin_reward_dialog.dart';
 
 class MainNavigationScaffold extends StatefulWidget {
   final int initialIndex;
@@ -34,6 +39,11 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ThemePreferencePromptDialog.maybeShow(context);
+      }
+    });
   }
 
   void _onTabSelected(int index) {
@@ -49,8 +59,26 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      extendBody: true,
+    return BlocListener<ArkanCoinsCubit, ArkanCoinsState>(
+      listenWhen: (prev, curr) =>
+          curr.newlyUnlockedAchievement != null &&
+          prev.newlyUnlockedAchievement != curr.newlyUnlockedAchievement,
+      listener: (context, coinsState) {
+        final achievement = coinsState.newlyUnlockedAchievement;
+        if (achievement == null) return;
+        context.read<ArkanCoinsCubit>().clearNewlyUnlockedAchievement();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          ArkanCoinRewardDialog.show(
+            context,
+            coinsEarned: achievement.rewardCoins,
+            title: '${achievement.iconEmoji} شارة جديدة: ${achievement.title}',
+            subtitle: achievement.description,
+          );
+        });
+      },
+      child: Scaffold(
+        extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -135,6 +163,7 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
           ),
         ),
       ),
+    ),
     );
   }
 

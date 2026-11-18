@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/utils/hijri_calendar_helper.dart';
 import '../../domain/entities/prayer_time_entity.dart';
 import '../../domain/entities/prayer_log_entity.dart';
 import '../../domain/entities/surah_entity.dart';
@@ -65,9 +66,35 @@ class IslamicHubRepositoryImpl implements IslamicHubRepository {
         latitude: targetLat,
         longitude: targetLng,
         method: targetMethod,
+        asrSchool: settings.asrJuristicMethod,
       );
 
-      return right(times);
+      final offsets = settings.prayerMinuteOffsets;
+      final adjustedPrayers = offsets.isEmpty
+          ? times.prayers
+          : times.prayers.map((p) {
+              final delta = offsets[p.nameEnglish.toLowerCase()] ?? 0;
+              return delta == 0
+                  ? p
+                  : p.copyWith(time: p.time.add(Duration(minutes: delta)));
+            }).toList();
+
+      final fallbackHijri = HijriCalendarHelper.fromGregorian(times.date);
+
+      return right(
+        DayPrayerTimes(
+          date: times.date,
+          hijriDate:
+              times.hijriDate.isNotEmpty ? times.hijriDate : fallbackHijri.formattedNumeric,
+          hijriDay: times.hijriDay.isNotEmpty ? times.hijriDay : fallbackHijri.day.toString(),
+          hijriMonth:
+              times.hijriMonth.isNotEmpty ? times.hijriMonth : fallbackHijri.monthNameAr,
+          hijriYear:
+              times.hijriYear.isNotEmpty ? times.hijriYear : fallbackHijri.year.toString(),
+          prayers: adjustedPrayers,
+          locationName: times.locationName,
+        ),
+      );
     } catch (e) {
       AppLogger.error('Failed to get prayer times: $e');
       return left('تعذر تحميل مواقيت الصلاة: $e');
@@ -241,6 +268,51 @@ class IslamicHubRepositoryImpl implements IslamicHubRepository {
   @override
   Future<List<AyahEntity>> searchQuran(String query) {
     return _quranRemoteDataSource.searchQuran(query);
+  }
+
+  @override
+  Future<bool> isFullQuranBundleCached() {
+    return _quranRemoteDataSource.isFullQuranBundleCached();
+  }
+
+  @override
+  Future<int> getDownloadedMushafPagesCount() {
+    return _quranRemoteDataSource.getDownloadedMushafPagesCount();
+  }
+
+  @override
+  Future<String?> getLocalMushafPagePath(int pageNumber) {
+    return _quranRemoteDataSource.getLocalMushafPageFilePath(pageNumber);
+  }
+
+  @override
+  Future<Either<String, void>> downloadFullQuranOfflineBundle({
+    void Function(double progress, String status)? onProgress,
+  }) async {
+    try {
+      await _quranRemoteDataSource.downloadFullQuranOfflineBundle(
+        onProgress: onProgress,
+      );
+      return right(null);
+    } catch (e) {
+      return left('تعذر تحميل حزمة القرآن أوفلاين: $e');
+    }
+  }
+
+  @override
+  Future<Either<String, void>> downloadAllMushafPages({
+    required void Function(int completed, int total) onProgress,
+    bool Function()? isCancelled,
+  }) async {
+    try {
+      await _quranRemoteDataSource.downloadAllMushafPages(
+        onProgress: onProgress,
+        isCancelled: isCancelled,
+      );
+      return right(null);
+    } catch (e) {
+      return left('تعذر تحميل صفحات المصحف أوفلاين: $e');
+    }
   }
 
   @override

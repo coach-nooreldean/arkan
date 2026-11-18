@@ -37,7 +37,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
       id: 'android-universal',
       title: 'أندرويد - ملف APK الشامل (Universal)',
       desc: 'النسخة الموصى بها للجميع: تعمل مباشرة على جميع هواتف وأجهزة أندرويد بدون استثناء.',
-      file: 'Arkan-1.0.0-universal.apk',
+      file: 'Arkan-1.1.0-universal.apk',
       size: '67.4 MB',
       recommended: true,
       platform: 'android',
@@ -48,7 +48,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
       id: 'android-arm64',
       title: 'أندرويد - الهواتف الحديثة (ARM64-v8a)',
       desc: 'حجم خفيف جداً وأداء فائق مخصص لمعظم الهواتف الحديثة (64-bit).',
-      file: 'Arkan-1.0.0-arm64-v8a.apk',
+      file: 'Arkan-1.1.0-arm64-v8a.apk',
       size: '26.9 MB',
       recommended: false,
       platform: 'android',
@@ -59,7 +59,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
       id: 'android-armv7',
       title: 'أندرويد - الهواتف القديمة (ARMv7a)',
       desc: 'نسخة خفيفة متوافقة تماماً مع معالجات الهواتف الاقتصادية والقديمة (32-bit).',
-      file: 'Arkan-1.0.0-armeabi-v7a.apk',
+      file: 'Arkan-1.1.0-armeabi-v7a.apk',
       size: '24.9 MB',
       recommended: false,
       platform: 'android',
@@ -90,7 +90,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
           مركز التنزيل المباشر 📦
         </span>
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white font-sans">
-          حمّل الإصدار الرسمي <span className="gold-gradient-text">v1.0.0</span>
+          حمّل الإصدار الرسمي <span className="gold-gradient-text">v1.1.0</span>
         </h2>
         <p className="text-slate-400 text-base sm:text-lg">
           روابط تنزيل مباشرة وسريعة خالية تماماً من الإعلانات ومن الروابط المختصرة.
@@ -138,8 +138,8 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
 
           {deviceInfo.isAndroid ? (
             <a
-              href="https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/Arkan-1.0.0-universal.apk"
-              onClick={(e) => handleDownload('Arkan-1.0.0-universal.apk', e)}
+              href="https://github.com/coach-nooreldean/arkan/releases/download/v1.1.0/Arkan-1.1.0-universal.apk"
+              onClick={(e) => handleDownload('Arkan-1.1.0-universal.apk', e)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-base font-extrabold bg-gradient-to-r from-gold-500 via-amber-500 to-gold-600 text-slate-950 hover:from-gold-400 hover:to-amber-400 shadow-neon-gold hover:scale-[1.02] active:scale-95 transition-all duration-200"
             >
               <Download className="w-5 h-5" />
@@ -163,7 +163,7 @@ export const ReleasesHub: React.FC<ReleasesHubProps> = ({ deviceInfo }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {releases.map((rel) => {
           const Icon = rel.icon;
-          const downloadUrl = rel.customUrl || `https://github.com/coach-nooreldean/arkan/releases/download/v1.0.0/${rel.file}`;
+          const downloadUrl = rel.customUrl || `https://github.com/coach-nooreldean/arkan/releases/download/v1.1.0/${rel.file}`;
           
           return (
             <div 

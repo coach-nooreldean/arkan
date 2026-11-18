@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:universal_io/io.dart';
 import '../../domain/entities/ayah_entity.dart';
 import '../cubits/quran_cubit.dart';
 
@@ -13,6 +14,10 @@ class MadaniPageRenderer extends StatefulWidget {
   final QuranReadingMode readingMode;
   final String primaryImageUrl;
   final List<String> alternativeUrls;
+  final String? localImagePath;
+  final List<AyahEntity> pageAyahs;
+  final int? selectedHighlightAyahNumber;
+  final ValueChanged<AyahEntity>? onAyahLongPress;
   final List<int> highlightLines;
   final List<AyahLineSegment> highlightSegments;
   final bool isCurrentlyPlaying;
@@ -25,6 +30,10 @@ class MadaniPageRenderer extends StatefulWidget {
     required this.readingMode,
     required this.primaryImageUrl,
     required this.alternativeUrls,
+    this.localImagePath,
+    this.pageAyahs = const [],
+    this.selectedHighlightAyahNumber,
+    this.onAyahLongPress,
     this.highlightLines = const [],
     this.highlightSegments = const [],
     this.isCurrentlyPlaying = false,
@@ -145,6 +154,18 @@ class _MadaniPageRendererState extends State<MadaniPageRenderer> with SingleTick
               }
 
               Widget buildFittedImage(String url) {
+                final localPath = widget.localImagePath;
+                if (!kIsWeb && localPath != null && File(localPath).existsSync()) {
+                  return Image.file(
+                    File(localPath),
+                    key: ValueKey('local_$localPath'),
+                    fit: BoxFit.contain,
+                    width: targetWidth,
+                    height: targetHeight,
+                    alignment: Alignment.center,
+                  );
+                }
+
                 if (kIsWeb) {
                   return Image.network(
                     url,
@@ -278,6 +299,14 @@ class _MadaniPageRendererState extends State<MadaniPageRenderer> with SingleTick
                           : buildFittedImage(currentUrl),
                     ),
 
+                    // Interactive Direct Long-Press Hitboxes + Selected Highlight
+                    if (widget.onAyahLongPress != null && widget.pageAyahs.isNotEmpty)
+                      ..._buildAyahHitboxes(
+                        targetWidth: targetWidth,
+                        targetHeight: targetHeight,
+                        isDark: isDark,
+                      ),
+
                     // Ayah Highlight Overlay (Exact Word-level segment or line highlight)
                     if (widget.isCurrentlyPlaying &&
                         (widget.highlightSegments.isNotEmpty || widget.highlightLines.isNotEmpty))
@@ -392,6 +421,84 @@ class _MadaniPageRendererState extends State<MadaniPageRenderer> with SingleTick
       left: left,
       width: width,
     );
+  }
+
+  List<Widget> _buildAyahHitboxes({
+    required double targetWidth,
+    required double targetHeight,
+    required bool isDark,
+  }) {
+    final widgets = <Widget>[];
+    final highlightColor = isDark
+        ? const Color(0xFF3551AE).withValues(alpha: 0.35)
+        : const Color(0xFFE0A922).withValues(alpha: 0.30);
+
+    for (final ayah in widget.pageAyahs) {
+      final isSelected = widget.selectedHighlightAyahNumber == ayah.number;
+      if (ayah.lineSegments.isNotEmpty) {
+        for (final segment in ayah.lineSegments) {
+          final lineBox = _getLineBox(
+            segment.line,
+            widget.pageNumber,
+            targetWidth,
+            targetHeight,
+          );
+          final segLeft = lineBox.left + (segment.leftRatio * lineBox.width);
+          final segWidth =
+              (segment.widthRatio * lineBox.width).clamp(16.0, lineBox.width);
+          widgets.add(
+            Positioned(
+              top: lineBox.top,
+              left: segLeft,
+              width: segWidth,
+              height: lineBox.height,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onLongPress: () => widget.onAyahLongPress?.call(ayah),
+                child: isSelected
+                    ? Container(
+                        decoration: BoxDecoration(
+                          color: highlightColor,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                      )
+                    : const SizedBox.expand(),
+              ),
+            ),
+          );
+        }
+      } else if (ayah.lines.isNotEmpty) {
+        for (final lineNum in ayah.lines) {
+          final lineBox = _getLineBox(
+            lineNum,
+            widget.pageNumber,
+            targetWidth,
+            targetHeight,
+          );
+          widgets.add(
+            Positioned(
+              top: lineBox.top,
+              left: lineBox.left,
+              width: lineBox.width,
+              height: lineBox.height,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onLongPress: () => widget.onAyahLongPress?.call(ayah),
+                child: isSelected
+                    ? Container(
+                        decoration: BoxDecoration(
+                          color: highlightColor,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                      )
+                    : const SizedBox.expand(),
+              ),
+            ),
+          );
+        }
+      }
+    }
+    return widgets;
   }
 }
 
